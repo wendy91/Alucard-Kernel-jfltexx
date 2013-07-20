@@ -707,6 +707,7 @@ CONFIG_SEC_RESTRICT_ROOTING_LOG=y
 # Fork hang detection
 # CONFIG_SEC_FORKHANG_DEBUG is not set
 
+<<<<<<< HEAD
 CONFIG_SEC_GPIO_DVS=y
 
 # CONFIG_SCSI_WAIT_SCAN is not set
@@ -720,3 +721,10 @@ CONFIG_CRYPTO_RNG=y
 CONFIG_CRYPTO_ANSI_CPRNG=y
 # CONFIG_SEC_FORKHANG_DEBUG is not set
 CONFIG_INPUT_KEYCHORD=y
+=======
+# Kernel features
+CONFIG_ARM_AUTO_HOTPLUG=y
+
+# Sound Control
+CONFIG_SOUND_CONTROL_HAX_GPL=y
+>>>>>>> 8b2ba14... Added faux sound control (Thanks to faux)
