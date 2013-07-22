@@ -3416,6 +3416,7 @@ CONFIG_NFS_FS=y
 CONFIG_NFS_V3=y
 CONFIG_NFS_V3_ACL=y
 CONFIG_NFS_V4=y
+<<<<<<< HEAD
 # CONFIG_NFS_V4_1 is not set
 # CONFIG_ROOT_NFS is not set
 # CONFIG_NFS_USE_LEGACY_DNS is not set
@@ -3430,17 +3431,23 @@ CONFIG_SUNRPC_GSS=y
 # CONFIG_SUNRPC_DEBUG is not set
 # CONFIG_CEPH_FS is not set
 CONFIG_CIFS=y
+=======
+CONFIG_CIFS=m
+>>>>>>> da2bec1... Enable Fat/MSdos/Vfat/Ntfs and added CIFS as module
 # CONFIG_CIFS_STATS is not set
 # CONFIG_CIFS_WEAK_PW_HASH is not set
 # CONFIG_CIFS_UPCALL is not set
 # CONFIG_CIFS_XATTR is not set
 # CONFIG_CIFS_DEBUG2 is not set
 # CONFIG_CIFS_DFS_UPCALL is not set
+<<<<<<< HEAD
 # CONFIG_NCP_FS is not set
 # CONFIG_CODA_FS is not set
 # CONFIG_AFS_FS is not set
 CONFIG_NLS=y
 CONFIG_NLS_DEFAULT="iso8859-1"
+=======
+>>>>>>> da2bec1... Enable Fat/MSdos/Vfat/Ntfs and added CIFS as module
 CONFIG_NLS_CODEPAGE_437=y
 # CONFIG_NLS_CODEPAGE_737 is not set
 # CONFIG_NLS_CODEPAGE_775 is not set
@@ -3863,3 +3870,15 @@ CONFIG_INPUT_KEYCHORD=y
 
 # Sound Control
 CONFIG_SOUND_CONTROL_HAX_GPL=y
+
+# DOS/FAT/NT Filesystems
+CONFIG_FAT_FS=y
+CONFIG_MSDOS_FS=y
+CONFIG_VFAT_FS=y
+CONFIG_FAT_DEFAULT_CODEPAGE=437
+CONFIG_FAT_DEFAULT_IOCHARSET="iso8859-1"
+CONFIG_NTFS_FS=m
+# CONFIG_NTFS_DEBUG is not set
+# CONFIG_NTFS_RW is not set
+
+
