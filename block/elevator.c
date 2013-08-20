@@ -1080,6 +1080,7 @@ ssize_t elv_iosched_store(struct request_queue *q, const char *name,
 		return count;
 
 	ret = elevator_change(q, name);
+	globalq[q->index] = q;
 	if (!ret)
 		return count;
 
