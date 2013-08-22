@@ -1148,9 +1148,15 @@ decrypt_pki_encrypted_session_key(struct ecryptfs_auth_tok *auth_tok,
 	u8 cipher_code = 0;
 	struct ecryptfs_msg_ctx *msg_ctx;
 	struct ecryptfs_message *msg = NULL;
+<<<<<<< HEAD
 	char *auth_tok_sig;
 	char *payload;
 	size_t payload_len;
+=======
+	char *auth_tok_sig = NULL;
+	char *payload = NULL;
+	size_t payload_len = 0;
+>>>>>>> b05701c... Fs changes to fix random restarts (Thanks to ktoonsez)
 	int rc;
 
 	rc = ecryptfs_get_auth_tok_sig(&auth_tok_sig, auth_tok);
