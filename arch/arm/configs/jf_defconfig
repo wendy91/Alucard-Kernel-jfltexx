@@ -872,7 +872,7 @@ CONFIG_MSM_KGSL_SIMPLE_GOV=y
 CONFIG_DYNAMIC_FSYNC=y
 
 #Zram
-CONFIG_ZRAM=m
+<ONFIG_ZRAM=y
 # CONFIG_ZRAM_DEBUG is not set
 CONFIG_ZRAM_FOR_ANDROID=y
 CONFIG_ZSMALLOC=y
@@ -897,5 +897,3 @@ CONFIG_RCU_FAST_NO_HZ=y
 
 #Dns resolver used by CIFS and AFS modules
 CONFIG_DNS_RESOLVER=y
-=======
->>>>>>> be033ba... Make zram module and some other zram changes
