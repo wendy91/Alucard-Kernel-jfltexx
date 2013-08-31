@@ -236,6 +236,12 @@ static void default_idle(void)
 void (*pm_idle)(void) = default_idle;
 EXPORT_SYMBOL(pm_idle);
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+extern void could_cswap(void);
+#endif /* CONFIG_ZRAM_FOR_ANDROID */
+>>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 
 /*
  * The idle thread, has rather strange semantics for calling pm_idle,
@@ -257,6 +263,12 @@ void cpu_idle(void)
 			if (cpu_is_offline(smp_processor_id()))
 				cpu_die();
 #endif
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+			could_cswap();
+#endif /* CONFIG_ZRAM_FOR_ANDROID */
+>>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 			/*
 			 * We need to disable interrupts here
 			 * to ensure we don't miss a wakeup call.
