@@ -3749,6 +3749,7 @@ CONFIG_CRYPTO_DEV_QCEDEV=m
 # CONFIG_CRYPTO_DEV_OTA_CRYPTO is not set
 CONFIG_BINARY_PRINTF=y
 
+<<<<<<< HEAD
 #
 # Library routines
 #
@@ -3794,3 +3795,12 @@ CONFIG_DQL=y
 CONFIG_NLATTR=y
 # CONFIG_AVERAGE is not set
 # CONFIG_CORDIC is not set
+=======
+#Dynamic Fsync
+CONFIG_DYNAMIC_FSYNC=y
+
+#Zram
+CONFIG_ZRAM=y
+# CONFIG_ZRAM_DEBUG is not set
+CONFIG_ZRAM_FOR_ANDROID=y
+>>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
