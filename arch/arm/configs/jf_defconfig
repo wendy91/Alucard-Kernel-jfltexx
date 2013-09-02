@@ -897,3 +897,5 @@ CONFIG_RCU_FAST_NO_HZ=y
 
 #Dns resolver used by CIFS and AFS modules
 CONFIG_DNS_RESOLVER=y
+=======
+>>>>>>> be033ba... Make zram module and some other zram changes
