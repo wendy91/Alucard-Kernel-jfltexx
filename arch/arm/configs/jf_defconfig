@@ -3786,20 +3786,17 @@ CONFIG_CRYPTO_DES=y
 CONFIG_CRYPTO_TWOFISH=y
 CONFIG_CRYPTO_TWOFISH_COMMON=y
 
-<<<<<<< HEAD
 #
 # Compression
 #
 CONFIG_CRYPTO_DEFLATE=y
 # CONFIG_CRYPTO_ZLIB is not set
 # CONFIG_CRYPTO_LZO is not set
-=======
 # Add rooting prevention
 # CONFIG_SEC_RESTRICT_ROOTING is not set
 # CONFIG_SEC_RESTRICT_SETUID is not set
 # CONFIG_SEC_RESTRICT_FORK is not set
 # CONFIG_SEC_RESTRICT_ROOTING_LOG is not set
->>>>>>> cfeabbe... disable rooting restrictions
 
 #
 # Random Number Generation
