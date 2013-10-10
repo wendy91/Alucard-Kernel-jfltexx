@@ -3860,12 +3860,6 @@ CONFIG_NLATTR=y
 # Fork hang detection
 # CONFIG_SEC_FORKHANG_DEBUG is not set
 CONFIG_INPUT_KEYCHORD=y
-<<<<<<< HEAD
-=======
-
-# Kernel features
-CONFIG_ARM_AUTO_HOTPLUG=y
 
 # Sound Control
 CONFIG_SOUND_CONTROL_HAX_GPL=y
->>>>>>> 8b2ba14... Added faux sound control (Thanks to faux)
