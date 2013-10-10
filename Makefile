@@ -1,6 +1,14 @@
 VERSION = 3
 PATCHLEVEL = 4
+<<<<<<< HEAD
+SUBLEVEL = 60
+=======
+<<<<<<< HEAD
+SUBLEVEL = 55
+=======
 SUBLEVEL = 61
+>>>>>>> 0ca25e8... Linux 3.4.61
+>>>>>>> 98d2491... Patching linux 3.4.61!
 EXTRAVERSION =
 NAME = Saber-toothed Squirrel
 
