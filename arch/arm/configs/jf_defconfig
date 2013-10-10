@@ -1494,15 +1494,12 @@ CONFIG_USB_NET_ZAURUS=y
 # CONFIG_USB_SIERRA_NET is not set
 # CONFIG_USB_VL600 is not set
 CONFIG_MSM_RMNET_USB=y
-<<<<<<< HEAD
 CONFIG_WLAN=y
 # CONFIG_USB_ZD1201 is not set
 # CONFIG_USB_NET_RNDIS_WLAN is not set
 # CONFIG_LIBRA_SDIOIF is not set
 # CONFIG_ATH6K_LEGACY_EXT is not set
-=======
 # CONFIG_USB_DEBUG is not set
->>>>>>> 86fc9df... disable all debuggers
 # CONFIG_WCNSS_CORE is not set
 # CONFIG_ATH_COMMON is not set
 # CONFIG_BCM4330 is not set
@@ -1848,7 +1845,6 @@ CONFIG_SPI_SPIDEV=m
 # CONFIG_SPMI is not set
 CONFIG_SLIMBUS=y
 CONFIG_SLIMBUS_MSM_CTRL=y
-<<<<<<< HEAD
 # CONFIG_HSI is not set
 
 #
@@ -1870,9 +1866,7 @@ CONFIG_SLIMBUS_MSM_CTRL=y
 CONFIG_ARCH_REQUIRE_GPIOLIB=y
 CONFIG_GPIOLIB=y
 CONFIG_DEBUG_GPIO=y
-=======
 # CONFIG_DEBUG_GPIO is not set
->>>>>>> 86fc9df... disable all debuggers
 CONFIG_GPIO_SYSFS=y
 
 #
@@ -2442,7 +2436,6 @@ CONFIG_FB_SYS_FOPS=y
 # CONFIG_FB_SMSCUFX is not set
 # CONFIG_FB_UDL is not set
 CONFIG_FB_VIRTUAL=y
-<<<<<<< HEAD
 # CONFIG_FB_METRONOME is not set
 # CONFIG_FB_BROADSHEET is not set
 CONFIG_MSM_VIDC=y
@@ -2459,9 +2452,7 @@ CONFIG_SAMSUNG_MHL_8240=y
 # CONFIG_SAMSUNG_USE_11PIN_CONNECTOR is not set
 # CONFIG_SAMSUNG_SMARTDOCK is not set
 # CONFIG_MHL_NEW_CBUS_MSC_CMD is not set
-=======
 # CONFIG_SEC_DEBUG_MDP is not set
->>>>>>> 86fc9df... disable all debuggers
 CONFIG_FB_MSM=y
 # CONFIG_FB_MSM_BACKLIGHT is not set
 # CONFIG_FB_MSM_LOGO is not set
@@ -3536,7 +3527,6 @@ CONFIG_DEBUG_INFO=y
 # CONFIG_DEBUG_VM is not set
 # CONFIG_DEBUG_WRITECOUNT is not set
 CONFIG_DEBUG_MEMORY_INIT=y
-<<<<<<< HEAD
 # CONFIG_DEBUG_LIST is not set
 # CONFIG_TEST_LIST_SORT is not set
 # CONFIG_DEBUG_SG is not set
@@ -3613,7 +3603,6 @@ CONFIG_SEC_DEBUG_SUBSYS=y
 CONFIG_SEC_DEBUG_MDM_FILE_INFO=y
 # CONFIG_SEC_DEBUG_DOUBLE_FREE is not set
 CONFIG_PID_IN_CONTEXTIDR=y
-=======
 CONFIG_ENABLE_DEFAULT_TRACERS=y
 # CONFIG_DYNAMIC_DEBUG is not set
 CONFIG_DEBUG_USER=y
@@ -3668,7 +3657,6 @@ CONFIG_BCM2079X_NFC_I2C=y
 CONFIG_MUIC_CARDOCK_ENABLE=y
 CONFIG_SEC_FPGA=y
 CONFIG_SENSORS_HALL=y
->>>>>>> 86fc9df... disable all debuggers
 
 #
 # Samsung Rooting Restriction Feature
@@ -3805,7 +3793,6 @@ CONFIG_CRYPTO_DEFLATE=y
 # CONFIG_CRYPTO_ZLIB is not set
 # CONFIG_CRYPTO_LZO is not set
 
-<<<<<<< HEAD
 #
 # Random Number Generation
 #
@@ -3865,8 +3852,6 @@ CONFIG_DQL=y
 CONFIG_NLATTR=y
 # CONFIG_AVERAGE is not set
 # CONFIG_CORDIC is not set
-=======
 # Fork hang detection
 # CONFIG_SEC_FORKHANG_DEBUG is not set
 CONFIG_INPUT_KEYCHORD=y
->>>>>>> 86fc9df... disable all debuggers
