@@ -899,12 +899,7 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 	struct input_dev *input;
 	int i, error;
 	int wakeup = 0;
-<<<<<<< HEAD
 	int ret=0;
-=======
-#ifdef CONFIG_SENSORS_HALL
-	int ret = 0;
->>>>>>> a6f7d38... Drivers changes
 	struct device *sec_key;
 
 	if (!pdata) {
