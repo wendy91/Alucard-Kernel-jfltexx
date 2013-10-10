@@ -1900,12 +1900,8 @@ __acquires(&gcwq->lock)
 	lock_map_acquire_read(&cwq->wq->lockdep_map);
 	lock_map_acquire(&lockdep_map);
 	trace_workqueue_execute_start(work);
-<<<<<<< HEAD
-#if CONFIG_SEC_DEBUG
-=======
 	worker->current_func(work);	
 #ifdef CONFIG_SEC_DEBUG
->>>>>>> cd21915... Linux 3.4.60
 	secdbg_sched_msg("@%pS", f);
 #endif
 	/*
