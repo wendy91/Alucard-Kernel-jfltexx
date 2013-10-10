@@ -92,10 +92,7 @@ static uint32_t minimum_freeswap_pages = MIN_FREESWAP_PAGES;
 static uint32_t minimun_reclaim_pages = MIN_RECLAIM_PAGES;
 static uint32_t minimum_interval_time = MIN_CSWAP_INTERVAL;
 #endif /* CONFIG_ZRAM_FOR_ANDROID */
-<<<<<<< HEAD
 
-=======
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 #define ENHANCED_LMK_ROUTINE
 #define LMK_COUNT_READ
 
