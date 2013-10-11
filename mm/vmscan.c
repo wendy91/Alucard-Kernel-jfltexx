@@ -3044,7 +3044,6 @@ static void kswapd_try_to_sleep(pg_data_t *pgdat, int order, int classzone_idx)
 		 * per-cpu vmstat threshold while kswapd is awake and restore
 		 * them before going back to sleep.
 		 */
-
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 		atomic_set(&kswapd_thread_on,0);
 #endif /* CONFIG_ZRAM_FOR_ANDROID */

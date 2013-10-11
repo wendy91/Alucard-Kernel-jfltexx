@@ -1,24 +1,24 @@
 /*
- * Author: Chad Froebel <chadfroebel@gmail.com>
- *
- * Simple port to Nexus 4 : motley <motley.slate@gmail.com>
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
+* Author: Chad Froebel <chadfroebel@gmail.com>
+*
+* Simple port to Nexus 4 : motley <motley.slate@gmail.com>
+*
+* This software is licensed under the terms of the GNU General Public
+* License version 2, as published by the Free Software Foundation, and
+* may be copied, distributed, and modified under those terms.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+*/
 
 /*
- * Possible values for "force_fast_charge" are :
- *
- *   0 - disabled (default)
- *   1 - substitute AC to USB unconditional
+* Possible values for "force_fast_charge" are :
+*
+* 0 - disabled (default)
+* 1 - substitute AC to USB unconditional
 */
 
 #include <linux/kobject.h>
@@ -41,8 +41,8 @@ int new_force_fast_charge;
 sscanf(buf, "%du", &new_force_fast_charge);
 
 if (new_force_fast_charge >= FAST_CHARGE_DISABLED && new_force_fast_charge <= FAST_CHARGE_FORCE_AC) {
-	/* update only if valid value provided */
-	force_fast_charge = new_force_fast_charge;
+/* update only if valid value provided */
+force_fast_charge = new_force_fast_charge;
 }
 
 return count;
@@ -92,4 +92,3 @@ void force_fast_charge_exit(void)
 
 module_init(force_fast_charge_init);
 module_exit(force_fast_charge_exit);
-
