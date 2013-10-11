@@ -39,6 +39,8 @@
 
 #include "blk.h"
 
+extern void set_cur_sched(const char *name);
+
 static DEFINE_SPINLOCK(elv_list_lock);
 static LIST_HEAD(elv_list);
 static struct request_queue *globalq[50];
