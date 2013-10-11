@@ -17,10 +17,10 @@ assert(getprop("ro.product.device") == "jflte" || getprop("ro.build.product") ==
        getprop("ro.product.device") == "i9505" || getprop("ro.build.product") == "i9505" || 
        getprop("ro.product.device") == "GT-I9505" || getprop("ro.build.product") == "GT-I9505");
 
-mount("ext4", "EMMC", "/dev/block/mmcblk0p9", "/system");
-mount("ext4", "EMMC", "/dev/block/mmcblk0p10", "/data");
-mount("ext4", "EMMC", "/dev/block/mmcblk0p11", "/sdcard");
-mount("ext4", "EMMC", "/dev/block/mmcblk0p7", "/cache");
+run_program("/sbin/busybox", "mount", "/system");
+run_program("/sbin/busybox", "mount", "/data");
+run_program("/sbin/busybox", "mount", "/sdcard");
+run_program("/sbin/busybox", "mount", "/cache");
 
 # ---- Flash the kernel ----
 ui_print("");
@@ -78,6 +78,3 @@ delete("/system/Hawker.u.copier");
 ui_print("");
 show_progress(1.000000, 0);
 ui_print("Cleaning complete!");
-unmount("/system");
-unmount("/data");
-unmount("/sdcard");
