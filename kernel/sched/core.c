@@ -80,7 +80,7 @@
 #ifdef CONFIG_PARAVIRT
 #include <asm/paravirt.h>
 #endif
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
 #endif
 #include "sched.h"
@@ -2154,33 +2154,6 @@ unsigned long nr_iowait(void)
 	return sum;
 }
 
-unsigned long avg_nr_running(void)
-{
-	unsigned long i, sum = 0;
-	unsigned int seqcnt, ave_nr_running;
-
-	for_each_online_cpu(i) {
-		struct rq *q = cpu_rq(i);
-
-		/*
-		 * Update average to avoid reading stalled value if there were
-		 * no run-queue changes for a long time. On the other hand if
-		 * the changes are happening right now, just read current value
-		 * directly.
-		 */
-		seqcnt = read_seqcount_begin(&q->ave_seqcnt);
-		ave_nr_running = do_avg_nr_running(q);
-		if (read_seqcount_retry(&q->ave_seqcnt, seqcnt)) {
-			read_seqcount_begin(&q->ave_seqcnt);
-			ave_nr_running = q->ave_nr_running;
-		}
-
-		sum += ave_nr_running;
-	}
-
-	return sum;
-}
-
 unsigned long nr_iowait_cpu(int cpu)
 {
 	struct rq *this = cpu_rq(cpu);
@@ -3417,7 +3390,7 @@ need_resched:
 		 */
 		cpu = smp_processor_id();
 		rq = cpu_rq(cpu);
-#if CONFIG_SEC_DEBUG
+#ifdef CONFIG_SEC_DEBUG
 		sec_debug_task_sched_log(cpu, rq->curr);
 #endif
 	} else
@@ -7129,9 +7102,10 @@ void __init sched_init(void)
 	int i, j;
 	unsigned long alloc_size = 0, ptr;
 
+#ifdef CONFIG_SEC_DEBUG
     sec_gaf_supply_rqinfo(offsetof(struct rq, curr),
                           offsetof(struct cfs_rq, rq));
-
+#endif
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	alloc_size += 2 * nr_cpu_ids * sizeof(void **);
 #endif

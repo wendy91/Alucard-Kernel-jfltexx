@@ -26,7 +26,6 @@
 #ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
 #include <linux/module.h>
 #endif
-
 #define TZ_GOVERNOR_PERFORMANCE 0
 #define TZ_GOVERNOR_ONDEMAND    1
 #ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
@@ -183,7 +182,7 @@ static int simple_governor(struct kgsl_device *device, int idle_stat)
 		else if (pwr->active_pwrlevel == (pwr->num_pwrlevels - 1))
 			val = 0; /* already @ min, so do nothing */
 	}
-	return val;
+return val;
 }
 #endif
 
@@ -244,7 +243,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 					     pwr->active_pwrlevel + val);
 		//pr_info("TZ idle stat: %d, TZ PL: %d, TZ out: %d\n",
 		//		idle, pwr->active_pwrlevel, val);
-	}
+}
 }
 
 static void tz_busy(struct kgsl_device *device,
