@@ -665,6 +665,9 @@ static void nightmare_check_cpu(unsigned int cpu)
 	freq_up_brake = atomic_read(&nightmare_tuners_ins.freq_up_brake);
 	freq_step_dec = atomic_read(&nightmare_tuners_ins.freq_step_dec);
 
+	if (!cpu_policy)
+		return;
+
 	/*printk(KERN_ERR "TIMER CPU[%u], wall[%u], idle[%u]\n",cpu, wall_time, idle_time);*/
 	if (wall_time >= idle_time) { /*if wall_time < idle_time, evaluate cpu load next time*/
 		cur_load = wall_time > idle_time ? (100 * (wall_time - idle_time)) / wall_time : 1;/*if wall_time is equal to idle_time cpu_load is equal to 1*/
@@ -713,7 +716,7 @@ static void nightmare_check_cpu(unsigned int cpu)
 	 	next_freq = this_nightmare_cpuinfo->freq_table[index].frequency;
 #endif
 		/*printk(KERN_ERR "FREQ CALC.: CPU[%u], load[%d], target freq[%u], cur freq[%u], min freq[%u], max_freq[%u]\n",cpu, cur_load, next_freq, cpu_policy->cur, cpu_policy->min, max_freq);*/
-		if (next_freq != cpu_policy->cur) {
+		if (next_freq != cpu_policy->cur && cpu_online(cpu)) {
 			__cpufreq_driver_target(cpu_policy, next_freq, CPUFREQ_RELATION_L);
 		}
 	}
