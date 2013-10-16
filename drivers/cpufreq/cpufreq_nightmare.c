@@ -616,9 +616,8 @@ static struct attribute_group nightmare_attr_group = {
 
 /************************** sysfs end ************************/
 
-static void nightmare_check_cpu(unsigned int cpu)
+static void nightmare_check_cpu(struct cpufreq_nightmare_cpuinfo *this_nightmare_cpuinfo)
 {
-	struct cpufreq_nightmare_cpuinfo *this_nightmare_cpuinfo;
 	struct cpufreq_policy *cpu_policy;
 	unsigned int min_freq;
 	unsigned int max_freq;
@@ -639,8 +638,9 @@ static void nightmare_check_cpu(unsigned int cpu)
 	unsigned int tmp_freq = 0;
 	unsigned int next_freq = 0;
 	int cur_load = -1;
+	unsigned int cpu;
 	
-	this_nightmare_cpuinfo = &per_cpu(od_nightmare_cpuinfo, cpu);
+	cpu = this_nightmare_cpuinfo->cpu;
 	cpu_policy = this_nightmare_cpuinfo->cur_policy;
 
 	cur_idle_time = get_cpu_idle_time_us(cpu, NULL);
@@ -725,15 +725,15 @@ static void nightmare_check_cpu(unsigned int cpu)
 
 static void do_nightmare_timer(struct work_struct *work)
 {
-	struct cpufreq_nightmare_cpuinfo *this_nightmare_cpuinfo;
+	struct cpufreq_nightmare_cpuinfo *nightmare_cpuinfo;
 	int delay;
 	unsigned int cpu;
 
-	this_nightmare_cpuinfo = container_of(work, struct cpufreq_nightmare_cpuinfo, work.work);
-	cpu = this_nightmare_cpuinfo->cpu;
+	nightmare_cpuinfo = container_of(work, struct cpufreq_nightmare_cpuinfo, work.work);
+	cpu = nightmare_cpuinfo->cpu;
 
-	mutex_lock(&this_nightmare_cpuinfo->timer_mutex);
-	nightmare_check_cpu(cpu);
+	mutex_lock(&nightmare_cpuinfo->timer_mutex);
+	nightmare_check_cpu(nightmare_cpuinfo);
 	/* We want all CPUs to do sampling nearly on
 	 * same jiffy
 	 */
@@ -743,11 +743,11 @@ static void do_nightmare_timer(struct work_struct *work)
 	}
 
 #ifdef CONFIG_CPU_EXYNOS4210
-	mod_delayed_work_on(cpu, system_wq, &this_nightmare_cpuinfo->work, delay);
+	mod_delayed_work_on(cpu, system_wq, &nightmare_cpuinfo->work, delay);
 #else
-	queue_delayed_work_on(cpu, system_wq, &this_nightmare_cpuinfo->work, delay);
+	queue_delayed_work_on(cpu, system_wq, &nightmare_cpuinfo->work, delay);
 #endif
-	mutex_unlock(&this_nightmare_cpuinfo->timer_mutex);
+	mutex_unlock(&nightmare_cpuinfo->timer_mutex);
 }
 
 static int cpufreq_governor_nightmare(struct cpufreq_policy *policy,

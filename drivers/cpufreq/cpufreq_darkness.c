@@ -375,9 +375,8 @@ static struct attribute_group darkness_attr_group = {
 
 /************************** sysfs end ************************/
 
-static void darkness_check_cpu(unsigned int cpu)
+static void darkness_check_cpu(struct cpufreq_darkness_cpuinfo *this_darkness_cpuinfo)
 {
-	struct cpufreq_darkness_cpuinfo *this_darkness_cpuinfo;
 	struct cpufreq_policy *cpu_policy;
 	unsigned int min_freq;
 	unsigned int max_freq;
@@ -393,8 +392,9 @@ static void darkness_check_cpu(unsigned int cpu)
 	unsigned int index = 0;
 	unsigned int next_freq = 0;
 	int cur_load = -1;
+	unsigned int cpu;
 
-	this_darkness_cpuinfo = &per_cpu(od_darkness_cpuinfo, cpu);
+	cpu = this_darkness_cpuinfo->cpu;
 	cpu_policy = this_darkness_cpuinfo->cur_policy;	
 
 	cur_idle_time = get_cpu_idle_time_us(cpu, NULL);
@@ -468,15 +468,15 @@ static void darkness_check_cpu(unsigned int cpu)
 
 static void do_darkness_timer(struct work_struct *work)
 {
-	struct cpufreq_darkness_cpuinfo *this_darkness_cpuinfo;
+	struct cpufreq_darkness_cpuinfo *darkness_cpuinfo;
 	int delay;
 	unsigned int cpu;
 
-	this_darkness_cpuinfo =	container_of(work, struct cpufreq_darkness_cpuinfo, work.work);
-	cpu = this_darkness_cpuinfo->cpu;
+	darkness_cpuinfo =	container_of(work, struct cpufreq_darkness_cpuinfo, work.work);
+	cpu = darkness_cpuinfo->cpu;
 
-	mutex_lock(&this_darkness_cpuinfo->timer_mutex);
-	darkness_check_cpu(cpu);
+	mutex_lock(&darkness_cpuinfo->timer_mutex);
+	darkness_check_cpu(darkness_cpuinfo);
 	/* We want all CPUs to do sampling nearly on
 	 * same jiffy
 	 */
@@ -486,11 +486,11 @@ static void do_darkness_timer(struct work_struct *work)
 	}
 
 #ifdef CONFIG_CPU_EXYNOS4210
-	mod_delayed_work_on(cpu, system_wq, &this_darkness_cpuinfo->work, delay);
+	mod_delayed_work_on(cpu, system_wq, &darkness_cpuinfo->work, delay);
 #else
-	queue_delayed_work_on(cpu, system_wq, &this_darkness_cpuinfo->work, delay);
+	queue_delayed_work_on(cpu, system_wq, &darkness_cpuinfo->work, delay);
 #endif
-	mutex_unlock(&this_darkness_cpuinfo->timer_mutex);
+	mutex_unlock(&darkness_cpuinfo->timer_mutex);
 }
 
 static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
