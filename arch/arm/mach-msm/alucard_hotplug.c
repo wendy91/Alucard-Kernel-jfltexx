@@ -22,9 +22,9 @@
 #include <linux/mutex.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#ifndef CONFIG_CPU_EXYNOS4210
+/*#ifndef CONFIG_CPU_EXYNOS4210
 #include "acpuclock.h"
-#endif
+#endif*/
 
 static DEFINE_MUTEX(alucard_hotplug_mutex);
 static struct mutex timer_mutex;
@@ -632,11 +632,11 @@ static void hotplug_work_fn(struct work_struct *work)
 				/*printk(KERN_ERR "TIMER CPU[%u], wall[%u], idle[%u]\n",j, wall_time, idle_time);*/
 				if (wall_time >= idle_time && online) { /*if wall_time < idle_time, evaluate cpu load next time*/
 					cur_load = wall_time > idle_time ? (100 * (wall_time - idle_time)) / wall_time : 0;/*if wall_time is equal to idle_time cpu_load is equal to 0*/
-#ifndef CONFIG_CPU_EXYNOS4210
+/*#ifndef CONFIG_CPU_EXYNOS4210
 					cur_freq = acpuclk_get_rate(cpu);
-#else
+#else*/
 					cur_freq = cpufreq_quick_get(cpu);
-#endif
+/*#endif*/
 				} else {
 					cur_load = -1;
 					cur_freq = 0;
