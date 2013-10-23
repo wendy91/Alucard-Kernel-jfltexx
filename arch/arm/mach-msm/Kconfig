@@ -1023,6 +1023,14 @@ config MACH_JACTIVE_ATT
 	bool "APQ8064 Samsung JACTIVE_ATT"
 	help
 	  Support for the Samsung J ACTIVE ATT device.
+
+config BOARD_JF_REFRESH
+	depends on MACH_JF_SPR 
+	default n 
+	bool "APQ8064 Samsung JF REFRESH SPR"
+	help
+	  Support for the Samsung JF device.
+
 endmenu
 
 menu "Locale Selection"
@@ -1071,6 +1079,13 @@ config MACH_JF_CMCC
 	depends on ARCH_APQ8064
 	default n
 	bool "APQ8064 Samsung JF_CMCC"
+	help
+	  Support for the Samsung JF device.
+
+config MACH_JF_CMCCCSFB
+	depends on ARCH_APQ8064
+	default n
+	bool "APQ8064 Samsung JF_CMCC_CSFB"
 	help
 	  Support for the Samsung JF device.
 
@@ -1759,30 +1774,6 @@ config MSM_CPU_FREQ_MIN
 	default 245760
 
 endif # CPU_FREQ_MSM
-
-config LOW_CPUCLOCKS
-	bool "Enable ultra low CPU clocks"
-	default n
-	help
-	  Ultra low cpu frequencies enabled for CPU and L2 Cache
-
-config INTELLI_PLUG
-	bool "Enable intelli-plug cpu hotplug driver"
-	default n
-	help
-	  Generic Intelli-plug cpu hotplug driver for ARM SOCs
-
-config ALUCARD_HOTPLUG
-	bool "Enable alucard-hotplug cpu hotplug driver"
-	default n
-	help
-	  Generic Alucard-hotplug cpu hotplug driver for ARM SOCs
-
-config CPU_VOLTAGE_TABLE
-	bool "Enable CPU Voltage Table via sysfs for adjustements"
-	default n
-	help
-	  Krait User Votlage Control
 
 config MSM_AVS_HW
 	bool "Enable Adaptive Voltage Scaling (AVS)"
@@ -2801,13 +2792,6 @@ config SEC_THERMISTOR
 	default n
 	help
 	Use thermistor driver for checking temperature near AP chip.
-
-config FORCE_FAST_CHARGE
-  	bool "Force AC charge mode at will"
-  	default y
-  	help
-   	A simple sysfs interface to force adapters that
-    	are detected as USB to charge as AC.
 
 config SEC_FACTORY
 	bool "Enable FACTORY Features"

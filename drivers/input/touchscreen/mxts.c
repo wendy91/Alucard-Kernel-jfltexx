@@ -338,7 +338,7 @@ static int mxt_write_config_from_pdata(struct mxt_data *data)
 	struct device *dev = &data->client->dev;
 	u8 **tsp_config = (u8 **)data->pdata->config;
 	u8 i;
-	int ret=0;
+	int ret;
 
 	if (!tsp_config) {
 		dev_info(dev, "No cfg data in pdata\n");

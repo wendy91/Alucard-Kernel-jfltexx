@@ -236,9 +236,6 @@ static void default_idle(void)
 void (*pm_idle)(void) = default_idle;
 EXPORT_SYMBOL(pm_idle);
 
-#ifdef CONFIG_ZRAM_FOR_ANDROID
-extern void could_cswap(void);
-#endif /* CONFIG_ZRAM_FOR_ANDROID */
 
 /*
  * The idle thread, has rather strange semantics for calling pm_idle,
@@ -260,9 +257,6 @@ void cpu_idle(void)
 			if (cpu_is_offline(smp_processor_id()))
 				cpu_die();
 #endif
-#ifdef CONFIG_ZRAM_FOR_ANDROID
-			could_cswap();
-#endif /* CONFIG_ZRAM_FOR_ANDROID */
 			/*
 			 * We need to disable interrupts here
 			 * to ensure we don't miss a wakeup call.
@@ -324,7 +318,6 @@ void machine_shutdown(void)
 void machine_halt(void)
 {
 	machine_shutdown();
-	local_irq_disable();
 	while (1);
 }
 
@@ -350,7 +343,6 @@ void machine_restart(char *cmd)
 
 	/* Whoops - the platform was unable to reboot. Tell the user! */
 	printk("Reboot failed -- System halted\n");
-	local_irq_disable();
 	while (1);
 }
 
