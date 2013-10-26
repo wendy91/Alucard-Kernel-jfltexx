@@ -241,9 +241,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	}
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
-<<<<<<< HEAD
-	if (val)
-=======
 	idle = (idle > 0) ? idle : 0;
 #ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
 	if (priv->governor == TZ_GOVERNOR_SIMPLE)
@@ -254,7 +251,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
 #endif
 	if (val) {
->>>>>>> e7248d3... Add a simple GPU governor for Adreno xxx GPU series (Thanks to faux)
 		kgsl_pwrctrl_pwrlevel_change(device,
 					     pwr->active_pwrlevel + val);
 		//pr_info("TZ idle stat: %d, TZ PL: %d, TZ out: %d\n",
