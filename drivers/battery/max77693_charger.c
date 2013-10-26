@@ -756,12 +756,6 @@ static int sec_chg_set_property(struct power_supply *psy,
 	const int wpc_charging_current = charger->pdata->charging_current[
 		POWER_SUPPLY_TYPE_WIRELESS].input_current_limit;
 
-<<<<<<< HEAD
-=======
-	/* check and unlock */
-	check_charger_unlock_state(charger);
-	
->>>>>>> be9781e... Add fast charge
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		charger->status = val->intval;
