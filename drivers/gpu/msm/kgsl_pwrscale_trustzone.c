@@ -195,7 +195,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	struct tz_priv *priv = pwrscale->priv;
 	struct kgsl_power_stats stats;
-	int val, idle;
+	int val, idle=0;
 
 	/* In "performance" mode the clock speed always stays
 	   the same */
