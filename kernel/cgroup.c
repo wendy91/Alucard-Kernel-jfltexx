@@ -2184,11 +2184,7 @@ retry_find_task:
 			ret= -ESRCH;
 			goto out_unlock_cgroup;
 		}
-<<<<<<< HEAD
-
-=======
 #ifndef CONFIG_ZRAM_FOR_ANDROID
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 		/*
 		 * even if we're attaching all tasks in the thread group, we
 		 * only need to check permissions on one of them.

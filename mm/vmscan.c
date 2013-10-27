@@ -1349,11 +1349,7 @@ static int too_many_isolated(struct zone *zone, int file,
 	{
 		return 0;
 	}
-<<<<<<< HEAD
 #endif /* CONFIG_ZRAM_FOR_ANDROID */
-=======
-#endif
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 
 	if (current_is_kswapd())
 		return 0;
@@ -2255,11 +2251,7 @@ static bool shrink_zones(int priority, struct zonelist *zonelist,
 	unsigned long nr_soft_reclaimed = 0;
 #else
 	unsigned long nr_soft_reclaimed;
-<<<<<<< HEAD
 #endif /* CONFIG_ZRAM_FOR_ANDROID */
-=======
-#endif
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 	unsigned long nr_soft_scanned;
 	bool aborted_reclaim = false;
 
@@ -2310,11 +2302,7 @@ static bool shrink_zones(int priority, struct zonelist *zonelist,
 			nr_soft_reclaimed = mem_cgroup_soft_limit_reclaim(zone,
 						sc->order, sc->gfp_mask,
 						&nr_soft_scanned);
-<<<<<<< HEAD
 #endif /* CONFIG_ZRAM_FOR_ANDROID */
-=======
-#endif
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 			sc->nr_reclaimed += nr_soft_reclaimed;
 			sc->nr_scanned += nr_soft_scanned;
 			/* need some check for avoid more shrink_zone() */
@@ -2719,11 +2707,7 @@ static unsigned long balance_pgdat(pg_data_t *pgdat, int order,
 	unsigned long nr_soft_reclaimed = 0;
 #else
 	unsigned long nr_soft_reclaimed;
-<<<<<<< HEAD
-#endif /* CONFIG_ZRAM_FOR_ANDROID */
-=======
 #endif
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 	unsigned long nr_soft_scanned;
 	struct scan_control sc = {
 		.gfp_mask = GFP_KERNEL,
@@ -2839,11 +2823,7 @@ loop_again:
 			nr_soft_reclaimed = mem_cgroup_soft_limit_reclaim(zone,
 							order, sc.gfp_mask,
 							&nr_soft_scanned);
-<<<<<<< HEAD
 #endif /* CONFIG_ZRAM_FOR_ANDROID */
-=======
-#endif
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 			sc.nr_reclaimed += nr_soft_reclaimed;
 			total_scanned += nr_soft_scanned;
 
@@ -3068,10 +3048,6 @@ static void kswapd_try_to_sleep(pg_data_t *pgdat, int order, int classzone_idx)
 		 * per-cpu vmstat threshold while kswapd is awake and restore
 		 * them before going back to sleep.
 		 */
-<<<<<<< HEAD
-
-=======
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 		atomic_set(&kswapd_thread_on,0);
 #endif /* CONFIG_ZRAM_FOR_ANDROID */

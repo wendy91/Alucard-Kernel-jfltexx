@@ -39,6 +39,7 @@
 #include <linux/notifier.h>
 #include <linux/memory.h>
 #include <linux/memory_hotplug.h>
+#include <linux/earlysuspend.h>
 
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 #include <linux/fs.h>
@@ -48,39 +49,6 @@
 #include <linux/mm_inline.h>
 #include <linux/kthread.h>
 #include <linux/freezer.h>
-<<<<<<< HEAD
-#include <linux/cpu.h>
-#include <asm/atomic.h>
-
-#if defined(CONFIG_SMP)
-#define NR_TO_RECLAIM_PAGES 		(1024*2) /* 8MB*cpu_core, include file pages */
-#define MIN_FREESWAP_PAGES 		(NR_TO_RECLAIM_PAGES*2*NR_CPUS)
-#define MIN_RECLAIM_PAGES 		(NR_TO_RECLAIM_PAGES/8)
-#define MIN_CSWAP_INTERVAL 		(10*HZ) /* 10 senconds */
-#else /* CONFIG_SMP */
-#define NR_TO_RECLAIM_PAGES 		1024 /* 4MB, include file pages */
-#define MIN_FREESWAP_PAGES 		(NR_TO_RECLAIM_PAGES*2)
-#define MIN_RECLAIM_PAGES 		(NR_TO_RECLAIM_PAGES/8)
-#define MIN_CSWAP_INTERVAL 		(10*HZ) /* 10 senconds */
-#endif
-
-struct soft_reclaim {
-	atomic_t kcompcached_running;
-	atomic_t need_to_reclaim;
-	atomic_t lmk_running;
-	struct task_struct *kcompcached;
-};
-
-static struct soft_reclaim s_reclaim;
-extern atomic_t kswapd_thread_on;
-static unsigned long prev_jiffy;
-static uint32_t number_of_reclaim_pages = NR_TO_RECLAIM_PAGES;
-static uint32_t minimum_freeswap_pages = MIN_FREESWAP_PAGES;
-static uint32_t minimum_reclaim_pages = MIN_RECLAIM_PAGES;
-static uint32_t minimum_interval_time = MIN_CSWAP_INTERVAL;
-#endif /* CONFIG_ZRAM_FOR_ANDROID */
-
-=======
 #include <asm/atomic.h>
 
 #define MIN_FREESWAP_PAGES 8192 /* 32MB */
@@ -122,10 +90,9 @@ extern atomic_t kswapd_thread_on;
 static unsigned long prev_jiffy;
 int hidden_cgroup_counter = 0;
 static uint32_t minimum_freeswap_pages = MIN_FREESWAP_PAGES;
-static uint32_t minimun_reclaim_pages = MIN_RECLAIM_PAGES;
+static uint32_t minimum_reclaim_pages = MIN_RECLAIM_PAGES;
 static uint32_t minimum_interval_time = MIN_CSWAP_INTERVAL;
 #endif /* CONFIG_ZRAM_FOR_ANDROID */
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 #define ENHANCED_LMK_ROUTINE
 #define LMK_COUNT_READ
 
@@ -137,20 +104,41 @@ static uint32_t minimum_interval_time = MIN_CSWAP_INTERVAL;
 static uint32_t lmk_count = 0;
 #endif
 static uint32_t lowmem_debug_level = 1;
+static uint32_t lowmem_auto_oom = 1;
 static int lowmem_adj[6] = {
 	0,
-	1,
-	6,
+	2,
+	4,
+	9,
 	12,
+	15,
 };
-static int lowmem_adj_size = 4;
+static int lowmem_adj_size = 6;
 static int lowmem_minfree[6] = {
 	3 * 512,	/* 6MB */
 	2 * 1024,	/* 8MB */
 	4 * 1024,	/* 16MB */
+	12 * 1024,	/* 49MB */
 	16 * 1024,	/* 64MB */
+	20 * 1024,	/* 128MB */
 };
-static int lowmem_minfree_size = 4;
+static int lowmem_minfree_screen_off[6] = {
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	4 * 1024,	/* 16MB */
+	12 * 1024,	/* 49MB */
+	16 * 1024,	/* 64MB */
+	20 * 1024,	/* 128MB */
+};
+static int lowmem_minfree_screen_on[6] = {
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	4 * 1024,	/* 16MB */
+	12 * 1024,	/* 49MB */
+	16 * 1024,	/* 64MB */
+	20 * 1024,	/* 128MB */
+};
+static int lowmem_minfree_size = 6;
 
 static unsigned long lowmem_deathpending_timeout;
 
@@ -375,15 +363,29 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	return rem;
 }
 
+static void low_mem_early_suspend(struct early_suspend *handler)
+{
+	if (lowmem_auto_oom) {
+		memcpy(lowmem_minfree_screen_on, lowmem_minfree, sizeof(lowmem_minfree));
+		memcpy(lowmem_minfree, lowmem_minfree_screen_off, sizeof(lowmem_minfree_screen_off));
+	}
+}
+
+static void low_mem_late_resume(struct early_suspend *handler)
+{
+	if (lowmem_auto_oom)
+		memcpy(lowmem_minfree, lowmem_minfree_screen_on, sizeof(lowmem_minfree_screen_on));
+}
+
+static struct early_suspend low_mem_suspend = {
+	.suspend = low_mem_early_suspend,
+	.resume = low_mem_late_resume,
+};
 
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 void could_cswap(void)
 {
-<<<<<<< HEAD
-	if (atomic_read(&s_reclaim.need_to_reclaim) == 0)
-=======
 	if((hidden_cgroup_counter <= 0) && (atomic_read(&s_reclaim.need_to_reclaim) != 1))
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 		return;
 
 	if (time_before(jiffies, prev_jiffy + minimum_interval_time))
@@ -395,12 +397,6 @@ void could_cswap(void)
 	if (nr_swap_pages < minimum_freeswap_pages)
 		return;
 
-<<<<<<< HEAD
-	if (idle_cpu(task_cpu(s_reclaim.kcompcached)) && this_cpu_loadx(4) == 0) {
-		if (atomic_read(&s_reclaim.kcompcached_running) == 0) {
-			wake_up_process(s_reclaim.kcompcached);
-			atomic_set(&s_reclaim.kcompcached_running, 1);
-=======
 	if (unlikely(s_reclaim.kcompcached == NULL))
 		return;
 
@@ -427,14 +423,11 @@ void could_cswap(void)
 			wake_up_process(s_reclaim.kcompcached);
 			atomic_set(&s_reclaim.kcompcached_running, 1);
 			atomic_set(&s_reclaim.idle_report, 1);
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 			prev_jiffy = jiffies;
 		}
 	}
 }
 
-<<<<<<< HEAD
-=======
 inline void enable_soft_reclaim(void)
 {
 	atomic_set(&s_reclaim.kcompcached_enable, 1);
@@ -445,7 +438,6 @@ inline void disable_soft_reclaim(void)
 	atomic_set(&s_reclaim.kcompcached_enable, 0);
 }
 
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 inline void need_soft_reclaim(void)
 {
 	atomic_set(&s_reclaim.need_to_reclaim, 1);
@@ -462,9 +454,6 @@ int get_soft_reclaim_status(void)
 	return kcompcache_running;
 }
 
-<<<<<<< HEAD
-extern long rtcc_reclaim_pages(long nr_to_reclaim);
-=======
 static int soft_reclaim(void)
 {
 	int nid;
@@ -499,7 +488,6 @@ static int soft_reclaim(void)
 	return nr_reclaimed;
 }
 
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 static int do_compcache(void * nothing)
 {
 	int ret;
@@ -510,11 +498,7 @@ static int do_compcache(void * nothing)
 		if (kthread_should_stop())
 			break;
 
-<<<<<<< HEAD
-		if (rtcc_reclaim_pages(number_of_reclaim_pages) < minimum_reclaim_pages)
-=======
-		if (soft_reclaim() < minimun_reclaim_pages)
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
+		if (soft_reclaim() < minimum_reclaim_pages)
 			cancel_soft_reclaim();
 
 		atomic_set(&s_reclaim.kcompcached_running, 0);
@@ -524,13 +508,6 @@ static int do_compcache(void * nothing)
 
 	return 0;
 }
-<<<<<<< HEAD
-
-static ssize_t rtcc_trigger_store(struct class *class, struct class_attribute *attr,
-			const char *buf, size_t count)
-{
-	long val, magic_sign;
-=======
 static ssize_t rtcc_daemon_store(struct class *class, struct class_attribute *attr,
 			const char *buf, size_t count)
 {
@@ -538,18 +515,10 @@ static ssize_t rtcc_daemon_store(struct class *class, struct class_attribute *at
 	pid_t pid;
 	long val = -1;
 	long magic_sign = -1;
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 
 	sscanf(buf, "%ld,%ld", &val, &magic_sign);
 
 	if (val < 0 || ((val * val - 1) != magic_sign)) {
-<<<<<<< HEAD
-		pr_warning("Invalid command.\n");
-		goto out;
-	}
-
-	need_soft_reclaim();
-=======
 		pr_warning("Invalid rtccd pid\n");
 		goto out;
 	}
@@ -563,33 +532,15 @@ static ssize_t rtcc_daemon_store(struct class *class, struct class_attribute *at
 		}
 	}
 	pr_warning("No found rtccd at pid %d!\n", pid);
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 
 out:
 	return count;
 }
-<<<<<<< HEAD
-static CLASS_ATTR(rtcc_trigger, 0200, NULL, rtcc_trigger_store);
-static struct class *kcompcache_class;
-
-static int kcompcache_idle_notifier(struct notifier_block *nb, unsigned long val, void *data)
-{
-	could_cswap();
-	return 0;
-}
-
-static struct notifier_block kcompcache_idle_nb = {
-	.notifier_call = kcompcache_idle_notifier,
-};
-#endif /* CONFIG_ZRAM_FOR_ANDROID */
-
-=======
 static CLASS_ATTR(rtcc_daemon, 0200, NULL, rtcc_daemon_store);
 static struct class *kcompcache_class;
 #endif /* CONFIG_ZRAM_FOR_ANDROID */
 
 
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 static struct shrinker lowmem_shrinker = {
 	.shrink = lowmem_shrink,
 	.seeks = DEFAULT_SEEKS * 16
@@ -597,10 +548,9 @@ static struct shrinker lowmem_shrinker = {
 
 static int __init lowmem_init(void)
 {
+	register_early_suspend(&low_mem_suspend);
 	register_shrinker(&lowmem_shrinker);
 #ifdef CONFIG_ZRAM_FOR_ANDROID
-<<<<<<< HEAD
-=======
 	kcompcache_class = class_create(THIS_MODULE, "kcompcache");
 	if (IS_ERR(kcompcache_class)) {
 		pr_err("%s: couldn't create kcompcache sysfs class.\n", __func__);
@@ -611,7 +561,6 @@ static int __init lowmem_init(void)
 		goto error_create_rtcc_daemon_class_file;
 	}
 	
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 	s_reclaim.kcompcached = kthread_run(do_compcache, NULL, "kcompcached");
 	if (IS_ERR(s_reclaim.kcompcached)) {
 		/* failure at boot is fatal */
@@ -620,21 +569,6 @@ static int __init lowmem_init(void)
 	set_user_nice(s_reclaim.kcompcached, 0);
 	atomic_set(&s_reclaim.need_to_reclaim, 0);
 	atomic_set(&s_reclaim.kcompcached_running, 0);
-<<<<<<< HEAD
-	prev_jiffy = jiffies;
-
-	idle_notifier_register(&kcompcache_idle_nb);
-
-	kcompcache_class = class_create(THIS_MODULE, "kcompcache");
-	if (IS_ERR(kcompcache_class)) {
-		pr_err("%s: couldn't create kcompcache class.\n", __func__);
-		return 0;
-	}
-	if (class_create_file(kcompcache_class, &class_attr_rtcc_trigger) < 0) {
-		pr_err("%s: couldn't create rtcc trigger sysfs file.\n", __func__);
-		class_destroy(kcompcache_class);
-	}
-=======
 	atomic_set(&s_reclaim.idle_report, 0);
 	enable_soft_reclaim();
 	prev_jiffy = jiffies;
@@ -643,7 +577,6 @@ error_create_rtcc_daemon_class_file:
 	class_remove_file(kcompcache_class, &class_attr_rtcc_daemon);
 error_create_kcompcache_class:
 	class_destroy(kcompcache_class);
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 #endif
 	return 0;
 }
@@ -652,23 +585,13 @@ static void __exit lowmem_exit(void)
 {
 	unregister_shrinker(&lowmem_shrinker);
 #ifdef CONFIG_ZRAM_FOR_ANDROID
-<<<<<<< HEAD
-	idle_notifier_unregister(&kcompcache_idle_nb);
-=======
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 	if (s_reclaim.kcompcached) {
 		cancel_soft_reclaim();
 		kthread_stop(s_reclaim.kcompcached);
 		s_reclaim.kcompcached = NULL;
 	}
-<<<<<<< HEAD
-
-	if (kcompcache_class) {
-		class_remove_file(kcompcache_class, &class_attr_rtcc_trigger);
-=======
 	if (kcompcache_class) {
 		class_remove_file(kcompcache_class, &class_attr_rtcc_daemon);
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 		class_destroy(kcompcache_class);
 	}
 #endif
@@ -764,20 +687,16 @@ module_param_array_named(adj, lowmem_adj, int, &lowmem_adj_size,
 #endif
 module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 S_IRUGO | S_IWUSR);
+module_param_array_named(minfree_screen_off, lowmem_minfree_screen_off, uint, &lowmem_minfree_size,
+			 S_IRUGO | S_IWUSR);
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 #ifdef LMK_COUNT_READ
 module_param_named(lmkcount, lmk_count, uint, S_IRUGO);
 #endif
 
 #ifdef CONFIG_ZRAM_FOR_ANDROID
-<<<<<<< HEAD
-module_param_named(nr_reclaim, number_of_reclaim_pages, uint, S_IRUSR | S_IWUSR);
 module_param_named(min_freeswap, minimum_freeswap_pages, uint, S_IRUSR | S_IWUSR);
 module_param_named(min_reclaim, minimum_reclaim_pages, uint, S_IRUSR | S_IWUSR);
-=======
-module_param_named(min_freeswap, minimum_freeswap_pages, uint, S_IRUSR | S_IWUSR);
-module_param_named(min_reclaim, minimun_reclaim_pages, uint, S_IRUSR | S_IWUSR);
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 module_param_named(min_interval, minimum_interval_time, uint, S_IRUSR | S_IWUSR);
 #endif /* CONFIG_ZRAM_FOR_ANDROID */
 
@@ -785,4 +704,3 @@ module_init(lowmem_init);
 module_exit(lowmem_exit);
 
 MODULE_LICENSE("GPL");
-

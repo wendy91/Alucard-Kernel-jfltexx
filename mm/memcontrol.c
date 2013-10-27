@@ -57,8 +57,6 @@
 
 #include <trace/events/vmscan.h>
 
-<<<<<<< HEAD
-=======
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 #include <linux/swap.h>
 
@@ -92,7 +90,6 @@ extern void need_soft_reclaim(void);
 extern int hidden_cgroup_counter;
 #endif /* CONFIG_ZRAM_FOR_ANDROID */
 
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 /*
  * Statistics for memory cgroup.
  */
@@ -1743,13 +1740,6 @@ static int mem_cgroup_soft_reclaim(struct mem_cgroup *root_memcg,
 		}
 		if (!mem_cgroup_reclaimable(victim, false))
 			continue;
-<<<<<<< HEAD
-
-		total += mem_cgroup_shrink_node_zone(victim, gfp_mask, false,
-						     zone, &nr_scanned);
-		*total_scanned += nr_scanned;
-
-=======
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 		if(nr_swap_pages <= SOFT_RECLAIM_ONETIME)
 			break;
@@ -1761,7 +1751,6 @@ static int mem_cgroup_soft_reclaim(struct mem_cgroup *root_memcg,
 		if(*total_scanned > MAX_SCAN_NO)
 			break;
 #endif
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 		if (!res_counter_soft_limit_excess(&root_memcg->res))
 			break;
 	}
@@ -5720,8 +5709,6 @@ static void mem_cgroup_move_task(struct cgroup *cont,
 		mmput(mm);
 	}
 
-<<<<<<< HEAD
-=======
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 	if (mc.to && rtcc_memcgrp == mc.to) {
 		need_soft_reclaim();
@@ -5731,7 +5718,6 @@ static void mem_cgroup_move_task(struct cgroup *cont,
 	}
 #endif /* CONFIG_ZRAM_FOR_ANDROID */
 
->>>>>>> b95ab3e... Added zram (Thanks to ktoonsez)
 	if (mc.to)
 		mem_cgroup_clear_mc();
 }
