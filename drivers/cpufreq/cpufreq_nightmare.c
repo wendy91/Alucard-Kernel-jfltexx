@@ -71,10 +71,6 @@ static unsigned int nightmare_enable;	/* number of CPUs using this policy */
  */
 static DEFINE_MUTEX(nightmare_mutex);
 
-#ifndef CONFIG_CPU_EXYNOS4210
-static struct workqueue_struct *dbs_wq;
-#endif
-
 /*static atomic_t min_freq_limit[NR_CPUS];
 static atomic_t max_freq_limit[NR_CPUS];*/
 
@@ -262,7 +258,7 @@ static void update_sampling_rate(unsigned int new_rate)
 			#ifdef CONFIG_CPU_EXYNOS4210
 				mod_delayed_work_on(nightmare_cpuinfo->cpu, system_wq, &nightmare_cpuinfo->work, usecs_to_jiffies(new_rate));
 			#else
-				queue_delayed_work_on(nightmare_cpuinfo->cpu, dbs_wq, &nightmare_cpuinfo->work, usecs_to_jiffies(new_rate));
+				queue_delayed_work_on(nightmare_cpuinfo->cpu, system_wq, &nightmare_cpuinfo->work, usecs_to_jiffies(new_rate));
 			#endif
 		}
 		mutex_unlock(&nightmare_cpuinfo->timer_mutex);
@@ -751,7 +747,7 @@ static void do_nightmare_timer(struct work_struct *work)
 #ifdef CONFIG_CPU_EXYNOS4210
 	mod_delayed_work_on(cpu, system_wq, &nightmare_cpuinfo->work, delay);
 #else
-	queue_delayed_work_on(cpu, dbs_wq, &nightmare_cpuinfo->work, delay);
+	queue_delayed_work_on(cpu, system_wq, &nightmare_cpuinfo->work, delay);
 #endif
 	mutex_unlock(&nightmare_cpuinfo->timer_mutex);
 }
@@ -816,7 +812,7 @@ static int cpufreq_governor_nightmare(struct cpufreq_policy *policy,
 		mod_delayed_work_on(this_nightmare_cpuinfo->cpu, system_wq, &this_nightmare_cpuinfo->work, delay);
 #else
 		INIT_DELAYED_WORK_DEFERRABLE(&this_nightmare_cpuinfo->work, do_nightmare_timer);
-		queue_delayed_work_on(this_nightmare_cpuinfo->cpu, dbs_wq, &this_nightmare_cpuinfo->work, delay);
+		queue_delayed_work_on(this_nightmare_cpuinfo->cpu, system_wq, &this_nightmare_cpuinfo->work, delay);
 #endif
 
 		break;
@@ -854,18 +850,12 @@ static int cpufreq_governor_nightmare(struct cpufreq_policy *policy,
 
 static int __init cpufreq_gov_nightmare_init(void)
 {
-	dbs_wq = alloc_workqueue("nightmare_dbs_wq", WQ_HIGHPRI, 0);
-	if (!dbs_wq) {
-		printk(KERN_ERR "Failed to create nightmare_dbs_wq workqueue\n");
-		return -EFAULT;
-	}
 	return cpufreq_register_governor(&cpufreq_gov_nightmare);
 }
 
 static void __exit cpufreq_gov_nightmare_exit(void)
 {
 	cpufreq_unregister_governor(&cpufreq_gov_nightmare);
-	destroy_workqueue(dbs_wq);
 }
 
 MODULE_AUTHOR("Alucard24@XDA");
