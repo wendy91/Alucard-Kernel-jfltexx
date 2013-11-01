@@ -75,6 +75,10 @@ static unsigned int darkness_enable;	/* number of CPUs using this policy */
  */
 static DEFINE_MUTEX(darkness_mutex);
 
+#ifndef CONFIG_CPU_EXYNOS4210
+static struct workqueue_struct *dbs_wq;
+#endif
+
 /*static atomic_t min_freq_limit[NR_CPUS];
 static atomic_t max_freq_limit[NR_CPUS];*/
 
@@ -248,7 +252,7 @@ static void update_sampling_rate(unsigned int new_rate)
 			#ifdef CONFIG_CPU_EXYNOS4210
 				mod_delayed_work_on(darkness_cpuinfo->cpu, system_wq, &darkness_cpuinfo->work, usecs_to_jiffies(new_rate));
 			#else
-				queue_delayed_work_on(darkness_cpuinfo->cpu, system_wq, &darkness_cpuinfo->work, usecs_to_jiffies(new_rate));
+				queue_delayed_work_on(darkness_cpuinfo->cpu, dbs_wq, &darkness_cpuinfo->work, usecs_to_jiffies(new_rate));
 			#endif
 		}
 		mutex_unlock(&darkness_cpuinfo->timer_mutex);
@@ -490,7 +494,7 @@ static void do_darkness_timer(struct work_struct *work)
 #ifdef CONFIG_CPU_EXYNOS4210
 	mod_delayed_work_on(cpu, system_wq, &darkness_cpuinfo->work, delay);
 #else
-	queue_delayed_work_on(cpu, system_wq, &darkness_cpuinfo->work, delay);
+	queue_delayed_work_on(cpu, dbs_wq, &darkness_cpuinfo->work, delay);
 #endif
 	mutex_unlock(&darkness_cpuinfo->timer_mutex);
 }
@@ -555,7 +559,7 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 		mod_delayed_work_on(this_darkness_cpuinfo->cpu, system_wq, &this_darkness_cpuinfo->work, delay);
 #else
 		INIT_DELAYED_WORK_DEFERRABLE(&this_darkness_cpuinfo->work, do_darkness_timer);
-		queue_delayed_work_on(this_darkness_cpuinfo->cpu, system_wq, &this_darkness_cpuinfo->work, delay);
+		queue_delayed_work_on(this_darkness_cpuinfo->cpu, dbs_wq, &this_darkness_cpuinfo->work, delay);
 #endif
 
 		break;
@@ -593,12 +597,19 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 
 static int __init cpufreq_gov_darkness_init(void)
 {
+	dbs_wq = alloc_workqueue("darkness_dbs_wq", WQ_HIGHPRI, 0);
+	if (!dbs_wq) {
+		printk(KERN_ERR "Failed to create darkness_dbs_wq workqueue\n");
+		return -EFAULT;
+	}
+
 	return cpufreq_register_governor(&cpufreq_gov_darkness);
 }
 
 static void __exit cpufreq_gov_darkness_exit(void)
 {
 	cpufreq_unregister_governor(&cpufreq_gov_darkness);
+	destroy_workqueue(dbs_wq);
 }
 
 MODULE_AUTHOR("Alucard24@XDA");
