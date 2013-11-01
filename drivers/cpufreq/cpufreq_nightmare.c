@@ -226,6 +226,7 @@ static void update_sampling_rate(unsigned int new_rate)
 
 	atomic_set(&nightmare_tuners_ins.sampling_rate,new_rate);
 
+	get_online_cpus();
 	for_each_online_cpu(cpu) {
 		struct cpufreq_policy *policy;
 		struct cpufreq_nightmare_cpuinfo *nightmare_cpuinfo;
@@ -262,6 +263,7 @@ static void update_sampling_rate(unsigned int new_rate)
 		}
 		mutex_unlock(&nightmare_cpuinfo->timer_mutex);
 	}
+	put_online_cpus();
 }
 
 /* sampling_rate */
