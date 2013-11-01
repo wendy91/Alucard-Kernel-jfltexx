@@ -41,8 +41,6 @@
 
 static DEFINE_SPINLOCK(elv_list_lock);
 static LIST_HEAD(elv_list);
-static struct request_queue *globalq[50];
-static unsigned int queue_size = 0;
 
 /*
  * Merge hash stuff.
@@ -271,14 +269,6 @@ int elevator_init(struct request_queue *q, char *name)
 	}
 
 	q->elevator = eq;
-	
-	q->index = queue_size;
-	globalq[queue_size] = q;
-	pr_alert("ELEVATOR_INIT:  %s-%d\n", q->elevator->type->elevator_name, queue_size);
-	queue_size += 1;
-	if (queue_size > 40)
-		queue_size = 10;
-
 	return 0;
 }
 EXPORT_SYMBOL(elevator_init);
@@ -826,7 +816,6 @@ void elv_completed_request(struct request_queue *q, struct request *rq)
 
 	if (rq->cmd_flags & REQ_URGENT) {
 		q->notified_urgent = false;
-		WARN_ON(!q->dispatched_urgent);
 		q->dispatched_urgent = false;
 	}
 	/*
