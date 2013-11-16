@@ -13,10 +13,6 @@ ui_print("                                          ");
 ui_print("------------------------------------------");
 ui_print("");
 
-assert(getprop("ro.product.device") == "jflte" || getprop("ro.build.product") == "jflte" || 
-       getprop("ro.product.device") == "i9505" || getprop("ro.build.product") == "i9505" || 
-       getprop("ro.product.device") == "GT-I9505" || getprop("ro.build.product") == "GT-I9505");
-
 run_program("/sbin/busybox", "mount", "/system");
 run_program("/sbin/busybox", "mount", "/data");
 run_program("/sbin/busybox", "mount", "/sdcard");
