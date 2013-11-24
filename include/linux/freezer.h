@@ -358,4 +358,3 @@ static inline void set_freezable(void) {}
 #endif /* !CONFIG_FREEZER */
 
 #endif	/* FREEZER_H_INCLUDED */
-

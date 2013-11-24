@@ -3448,4 +3448,3 @@ void scan_unevictable_unregister_node(struct node *node)
 	device_remove_file(&node->dev, &dev_attr_scan_unevictable_pages);
 }
 #endif
-
