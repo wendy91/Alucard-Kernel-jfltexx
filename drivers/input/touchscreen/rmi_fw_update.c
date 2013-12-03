@@ -81,9 +81,8 @@
 #define STATUS_POLLING_PERIOD_US 3000
 
 #if defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_JACTIVE_ATT)
-#define FW_SUPPORT_HSYNC03(x)	 (strncmp(x->product_id, "SY 03", 5) == 0)
-#define FW_SUPPORT_HSYNC04(x)	 ((strncmp(x->product_id, "SY 04", 5) == 0)|| (strncmp(x->product_id, "S5000B", 6) == 0))
-#define FW_NOT_SUPPORT_HSYNC(x)	 ((strncmp(x->product_id, "SY 01", 5) == 0) || (strncmp(x->product_id, "SY 02", 5) == 0))
+#define FW_SUPPORT_HYNC(x)	 ((strncmp(x->product_id, "SY 03", 5))
+#define FW_NOT_SUPPORT_HYNC(x)	 ((strncmp(x->product_id, "SY 01", 5) == 0) || (strncmp(x->product_id, "S5000B", 6) == 0) || (strncmp(x->product_id, "SY 02", 5) == 0))
 #endif
 
 static ssize_t fwu_sysfs_show_image(struct file *data_file,
@@ -731,14 +730,13 @@ static int fwu_do_reflash(void)
 {
 	int retval;
 
-#ifdef TSP_BOOSTER
 	retval = set_freq_limit(DVFS_TOUCH_ID,
 				MIN_TOUCH_LIMIT);
 	if (retval < 0)
 		dev_err(&fwu->rmi4_data->i2c_client->dev,
 			"%s: dvfs failed at fw update.\n",
 			__func__);
-#endif
+
 	retval = fwu_enter_flash_prog();
 	if (retval < 0)
 		return retval;
@@ -968,31 +966,24 @@ static int fwu_start_reflash(bool mode, bool factory_fw)
 			dev_info(&fwu->rmi4_data->i2c_client->dev,
 				"%s: run fw update for FACTORY FIRMWARE\n",
 				__func__);
-			if (FW_NOT_SUPPORT_HSYNC(fwu))
+			if (FW_NOT_SUPPORT_HYNC(fwu))
 				snprintf(fw_path, SYNAPTICS_MAX_FW_PATH,
 					"%s", FW_IMAGE_NAME_B0_NON_HSYNC_FAC);
-			else if (FW_SUPPORT_HSYNC03(fwu))
+			else
 				snprintf(fw_path, SYNAPTICS_MAX_FW_PATH,
 					"%s", FW_IMAGE_NAME_B0_HSYNC_FAC);
-			else // FW_SUPPORT_HSYNC04(fwu)
-				snprintf(fw_path, SYNAPTICS_MAX_FW_PATH,
-					"%s", FW_IMAGE_NAME_B0_HSYNC04_FAC);
 		} else {
 		/* Read firmware according to ic revision */
 			if ((fwu->rmi4_data->ic_revision_of_ic >> 4) == 0xB) {
 				/* Read firmware according to panel ID */
 				switch (fwu->rmi4_data->panel_revision) {
 				case OCTA_PANEL_REVISION_34:
-					if (FW_NOT_SUPPORT_HSYNC(fwu))
+					if (FW_NOT_SUPPORT_HYNC(fwu))
 						snprintf(fw_path, SYNAPTICS_MAX_FW_PATH,
 							"%s", FW_IMAGE_NAME_B0_NON_HSYNC);
-					else if (FW_SUPPORT_HSYNC03(fwu)){
+					else
 						snprintf(fw_path, SYNAPTICS_MAX_FW_PATH,
 							"%s", FW_IMAGE_NAME_B0_HSYNC);
-						}
-					else // FW_SUPPORT_HSYNC04(fwu)
-						snprintf(fw_path, SYNAPTICS_MAX_FW_PATH,
-							"%s", FW_IMAGE_NAME_B0_HSYNC04);
 					break;
 				default:
 					dev_info(&fwu->rmi4_data->i2c_client->dev,
@@ -1119,9 +1110,7 @@ done:
 	if (fw_entry)
 		release_firmware(fw_entry);
 out:
-#ifdef TSP_BOOSTER
 	retval = set_freq_limit(DVFS_TOUCH_ID, -1);
-#endif
 	if (retval < 0)
 		dev_err(&fwu->rmi4_data->i2c_client->dev,
 			"%s: in fw update, failed booster stop.\n",

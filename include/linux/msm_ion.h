@@ -92,6 +92,7 @@ enum cp_mem_usage {
  */
 #define ION_HEAP(bit) (1 << (bit))
 
+#define ION_ADSP_HEAP_NAME	"adsp"
 #define ION_VMALLOC_HEAP_NAME	"vmalloc"
 #define ION_KMALLOC_HEAP_NAME	"kmalloc"
 #define ION_AUDIO_HEAP_NAME	"audio"

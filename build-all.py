@@ -91,8 +91,6 @@ def scan_configs():
     names = {}
     for n in glob.glob('arch/arm/configs/jf_???_defconfig'):
         names[os.path.basename(n)[:-10]] = n
-    for n in glob.glob('arch/arm/configs/jactive_???_defconfig'):
-        names[os.path.basename(n)[:-10]] = n
     return names
 
 class Builder:
@@ -144,7 +142,7 @@ def build(target):
     print 'Building %s in %s log %s' % (target, dest_dir, log_name)
     if not os.path.isdir(dest_dir):
         os.mkdir(dest_dir)
-    defconfig = 'arch/arm/configs/jf_defconfig'
+    defconfig = 'arch/arm/configs/%s_defconfig' % target[:-4]
     dotconfig = '%s/.config' % dest_dir
     savedefconfig = '%s/defconfig' % dest_dir
     shutil.copyfile(defconfig, dotconfig)
@@ -152,10 +150,10 @@ def build(target):
     devnull = open('/dev/null', 'r')
     subprocess.check_call(['make', 'O=%s' % dest_dir,
         'VARIANT_DEFCONFIG=%s_defconfig' % target,
-        'DEBUG_DEFCONFIG=jfeng_defconfig',
-	'SELINUX_DEFCONFIG=jfselinux_defconfig',
-	'SELINUX_LOG_DEFCONFIG=jfselinux_log_defconfig',
-        'jf_defconfig'], env=make_env, stdin=devnull)
+        'DEBUG_DEFCONFIG=%seng_defconfig' % target[:-4],
+	'SELINUX_DEFCONFIG=%sselinux_defconfig' % target[:-4],
+	'SELINUX_LOG_DEFCONFIG=%sselinux_log_defconfig' % target[:-4],
+        '%s_defconfig' % target[:-4]], env=make_env, stdin=devnull)
     devnull.close()
 
     if not all_options.updateconfigs:
@@ -233,6 +231,9 @@ def main():
     parser.add_option('-m', '--make-target', action='append',
             help='Build the indicated make target (default: %s)' %
                  ' '.join(make_command))
+    parser.add_option('-i', '--ignore-errors', action='store_true', 
+            dest="ignore",
+            help="Ignore errors from commands")
 
     (options, args) = parser.parse_args()
     global all_options
@@ -253,6 +254,9 @@ def main():
         make_command.append("-j%d" % options.jobs)
     if options.load_average:
         make_command.append("-l%d" % options.load_average)
+    if options.ignore:
+        make_command.append("-i")
+        make_command.append("-k")
 
     if args == ['all']:
         build_many(configs, configs.keys())

@@ -146,10 +146,6 @@
 #include <mach/fusion3-thermistor.h>
 #endif
 
-#ifdef CONFIG_KEXEC_HARDBOOT
-#include <asm/kexec.h>
-#endif
-
 #if defined(CONFIG_SENSORS_SSP)
 enum {
 	SNS_PWR_OFF,
@@ -294,7 +290,7 @@ static void max77693_haptic_power_onoff(int onoff)
 			printk(KERN_ERR"enable l8 failed, rc=%d\n", ret);
 			return;
 		}
-		//printk(KERN_DEBUG"haptic power_on is finished.\n");
+		printk(KERN_DEBUG"haptic power_on is finished.\n");
 	} else {
 		if (regulator_is_enabled(reg_l8)) {
 			ret = regulator_disable(reg_l8);
@@ -304,7 +300,7 @@ static void max77693_haptic_power_onoff(int onoff)
 				return;
 			}
 		}
-		//printk(KERN_DEBUG"haptic power_off is finished.\n");
+		printk(KERN_DEBUG"haptic power_off is finished.\n");
 	}
 }
 #endif
@@ -965,15 +961,7 @@ static struct platform_device ram_console_device = {
 static struct persistent_ram_descriptor per_ram_descs[] __initdata = {
        {
                .name = "ram_console",
-#ifdef CONFIG_KEXEC_HARDBOOT
-               .size = KEXEC_HB_PAGE_ADDR - RAMCONSOLE_PHYS_ADDR,
-       },
-       {
-               .name = "kexec_hb_page",
-               .size = SZ_1M - (KEXEC_HB_PAGE_ADDR - RAMCONSOLE_PHYS_ADDR),
-#else
                .size = SZ_1M,
-#endif
        }
 };
 
@@ -1023,6 +1011,47 @@ static struct reserve_info apq8064_reserve_info __initdata = {
 	.reserve_fixed_area = apq8064_reserve_fixed_area,
 	.paddr_to_memtype = apq8064_paddr_to_memtype,
 };
+
+static int apq8064_memory_bank_size(void)
+{
+	return 1<<29;
+}
+
+static void __init locate_unstable_memory(void)
+{
+	struct membank *mb = &meminfo.bank[meminfo.nr_banks - 1];
+	unsigned long bank_size;
+	unsigned long low, high;
+
+	bank_size = apq8064_memory_bank_size();
+	low = meminfo.bank[0].start;
+	high = mb->start + mb->size;
+
+	/* Check if 32 bit overflow occured */
+	if (high < mb->start)
+		high = -PAGE_SIZE;
+
+	low &= ~(bank_size - 1);
+
+	if (high - low <= bank_size)
+		goto no_dmm;
+
+#ifdef CONFIG_ENABLE_DMM
+	apq8064_reserve_info.low_unstable_address = mb->start -
+					MIN_MEMORY_BLOCK_SIZE + mb->size;
+	apq8064_reserve_info.max_unstable_size = MIN_MEMORY_BLOCK_SIZE;
+
+	apq8064_reserve_info.bank_size = bank_size;
+	pr_info("low unstable address %lx max size %lx bank size %lx\n",
+		apq8064_reserve_info.low_unstable_address,
+		apq8064_reserve_info.max_unstable_size,
+		apq8064_reserve_info.bank_size);
+	return;
+#endif
+no_dmm:
+	apq8064_reserve_info.low_unstable_address = high;
+	apq8064_reserve_info.max_unstable_size = 0;
+}
 
 #ifdef CONFIG_KEYBOARD_CYPRESS_TOUCH_236
 
@@ -1172,6 +1201,12 @@ static void cypress_gpio_init(void)
 */
 #endif
 
+static int apq8064_change_memory_power(u64 start, u64 size,
+	int change_type)
+{
+	return soc_change_memory_power(start, size, change_type);
+}
+
 static char prim_panel_name[PANEL_NAME_MAX_LEN];
 static char ext_panel_name[PANEL_NAME_MAX_LEN];
 
@@ -1211,9 +1246,21 @@ static void __init apq8064_reserve(void)
 #endif
 }
 
+static void __init place_movable_zone(void)
+{
+#ifdef CONFIG_ENABLE_DMM
+	movable_reserved_start = apq8064_reserve_info.low_unstable_address;
+	movable_reserved_size = apq8064_reserve_info.max_unstable_size;
+	pr_info("movable zone start %lx size %lx\n",
+		movable_reserved_start, movable_reserved_size);
+#endif
+}
+
 static void __init apq8064_early_reserve(void)
 {
 	reserve_info = &apq8064_reserve_info;
+	locate_unstable_memory();
+	place_movable_zone();
 
 }
 #ifdef CONFIG_USB_EHCI_MSM_HSIC
@@ -2081,7 +2128,6 @@ static int ssp_check_changes(void)
 */
 static void ssp_get_positions(int *acc, int *mag)
 {
-#if !defined(CONFIG_MACH_JF_CMCCCSFB)
 	if (system_rev == BOARD_REV13)
 		*acc = MPU6500_TOP_RIGHT_UPPER;
 	else if (system_rev > BOARD_REV09)
@@ -2090,15 +2136,7 @@ static void ssp_get_positions(int *acc, int *mag)
 		*acc = MPU6500_TOP_RIGHT_UPPER;
 	else
 		*acc = MPU6500_BOTTOM_RIGHT_UPPER;
-#else
-	if (system_rev > BOARD_REV09)
-		*acc = K330_TOP_LEFT_UPPER;
-	else if (system_rev > BOARD_REV04)
-		*acc = MPU6500_TOP_RIGHT_UPPER;
-	else
-		*acc = MPU6500_BOTTOM_RIGHT_UPPER;
 
-#endif
 	if (system_rev > BOARD_REV06)
 		*mag = YAS532_BOTTOM_RIGHT_LOWER;
 	else if (system_rev > BOARD_REV03)
@@ -3140,7 +3178,7 @@ static struct platform_device msm_tsens_device = {
 };
 
 static struct msm_thermal_data msm_thermal_pdata = {
-	.sensor_id = 0,
+	.sensor_id = 7,
 	.poll_ms = 250,
 	.limit_temp_degC = 60,
 	.temp_hysteresis_degC = 10,
@@ -4289,7 +4327,7 @@ static struct msm_i2c_platform_data apq8064_i2c_qup_gsbi3_pdata = {
 };
 
 static struct msm_i2c_platform_data apq8064_i2c_qup_gsbi4_pdata = {
-	.clk_freq = 400000,
+	.clk_freq = 100000,
 	.src_clk_rate = 24000000,
 };
 
@@ -5319,6 +5357,7 @@ static void __init samsung_jf_init(void)
 	bcm2079x_init();
 	nfc_gpio_rev_init();
 #endif
+	change_memory_power = &apq8064_change_memory_power;
 
 #ifndef CONFIG_MACH_JF
 	if (machine_is_mpq8064_cdp()) {

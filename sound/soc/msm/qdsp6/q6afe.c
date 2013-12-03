@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -472,7 +472,7 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 		proxy_afe_instance[port_id & 0x1]++;
 		afe_close_done[port_id & 0x1] = false;
 		port_id = VIRTUAL_ID_TO_PORTID(port_id);
-	}		
+	}
 
 	ret = afe_q6_interface_prepare();
 	if (IS_ERR_VALUE(ret))
@@ -1732,7 +1732,7 @@ int afe_close(int port_id)
 			proxy_afe_instance[port_id & 0x1] == 0))
 			return 0;
 		else
-			afe_close_done[port_id & 0x1] = true;			
+			afe_close_done[port_id & 0x1] = true;
 	}
 
 	if ((port_id == RT_PROXY_DAI_002_RX) ||
@@ -1745,9 +1745,9 @@ int afe_close(int port_id)
 			proxy_afe_instance[port_id & 0x1] == 0))
 			return 0;
 		else
-			afe_close_done[port_id & 0x1] = true;			
+			afe_close_done[port_id & 0x1] = true;
 	}
-	
+
 	port_id = afe_convert_virtual_to_portid(port_id);
 
 	stop.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,

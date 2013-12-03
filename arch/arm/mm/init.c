@@ -104,9 +104,6 @@ void show_mem(unsigned int filter)
 	printk("Mem-info:\n");
 	show_free_areas(filter);
 
-	if (filter & SHOW_MEM_FILTER_PAGE_COUNT)
-		return;
-
 	for_each_bank (i, mi) {
 		struct membank *bank = &mi->bank[i];
 		unsigned int pfn1, pfn2;
@@ -227,7 +224,7 @@ EXPORT_SYMBOL(arm_dma_zone_size);
  * allocations.  This must be the smallest DMA mask in the system,
  * so a successful GFP_DMA allocation will always satisfy this.
  */
-phys_addr_t arm_dma_limit;
+u32 arm_dma_limit;
 
 static void __init arm_adjust_dma_zone(unsigned long *size, unsigned long *hole,
 	unsigned long dma_size)
@@ -364,7 +361,7 @@ phys_addr_t __init arm_memblock_steal(phys_addr_t size, phys_addr_t align)
 
 	BUG_ON(!arm_memblock_steal_permitted);
 
-	phys = memblock_alloc_base(size, align, MEMBLOCK_ALLOC_ANYWHERE);
+	phys = memblock_alloc(size, align);
 	memblock_free(phys, size);
 	memblock_remove(phys, size);
 
@@ -378,89 +375,29 @@ static int __init meminfo_cmp(const void *_a, const void *_b)
 	return cmp < 0 ? -1 : cmp > 0 ? 1 : 0;
 }
 
-phys_addr_t memory_hole_offset;
-EXPORT_SYMBOL(memory_hole_offset);
-phys_addr_t memory_hole_start;
-EXPORT_SYMBOL(memory_hole_start);
-phys_addr_t memory_hole_end;
-EXPORT_SYMBOL(memory_hole_end);
-unsigned long memory_hole_align;
-EXPORT_SYMBOL(memory_hole_align);
-unsigned long virtual_hole_start;
-unsigned long virtual_hole_end;
-
 #ifdef CONFIG_DONT_MAP_HOLE_AFTER_MEMBANK0
-void find_memory_hole(void)
+unsigned long membank0_size;
+EXPORT_SYMBOL(membank0_size);
+unsigned long membank1_start;
+EXPORT_SYMBOL(membank1_start);
+
+void __init find_membank0_hole(void)
 {
-	int i;
-	phys_addr_t hole_start;
-	phys_addr_t hole_size;
-	unsigned long hole_end_virt;
+	sort(&meminfo.bank, meminfo.nr_banks,
+		sizeof(meminfo.bank[0]), meminfo_cmp, NULL);
 
-	/*
-	 * Find the start and end of the hole, using meminfo.
-	 */
-	for (i = 0; i < (meminfo.nr_banks - 1); i++) {
-		if ((meminfo.bank[i].start + meminfo.bank[i].size) !=
-						meminfo.bank[i+1].start) {
-			if (meminfo.bank[i].start + meminfo.bank[i].size
-							<= MAX_HOLE_ADDRESS) {
-
-				hole_start = meminfo.bank[i].start +
-							meminfo.bank[i].size;
-				hole_size = meminfo.bank[i+1].start -
-								hole_start;
-
-				if (memory_hole_start == 0 &&
-							memory_hole_end == 0) {
-					memory_hole_start = hole_start;
-					memory_hole_end = hole_start +
-								hole_size;
-				} else if ((memory_hole_end -
-					memory_hole_start) <= hole_size) {
-					memory_hole_start = hole_start;
-					memory_hole_end = hole_start +
-								hole_size;
-				}
-			}
-		}
-	}
-
-	memory_hole_offset = memory_hole_start - PHYS_OFFSET;
-	if (!IS_ALIGNED(memory_hole_start, SECTION_SIZE)) {
-		pr_err("memory_hole_start %pa is not aligned to %lx\n",
-			&memory_hole_start, SECTION_SIZE);
-		BUG();
-	}
-	if (!IS_ALIGNED(memory_hole_end, SECTION_SIZE)) {
-		pr_err("memory_hole_end %pa is not aligned to %lx\n",
-			&memory_hole_end, SECTION_SIZE);
-		BUG();
-	}
-
-	hole_end_virt = __phys_to_virt(memory_hole_end);
-
-	if ((!IS_ALIGNED(hole_end_virt, PMD_SIZE) &&
-	     IS_ALIGNED(memory_hole_end, PMD_SIZE)) ||
-	     (IS_ALIGNED(hole_end_virt, PMD_SIZE) &&
-	      !IS_ALIGNED(memory_hole_end, PMD_SIZE))) {
-		memory_hole_align = !IS_ALIGNED(hole_end_virt, PMD_SIZE) ?
-					hole_end_virt & ~PMD_MASK :
-					memory_hole_end & ~PMD_MASK;
-		virtual_hole_start = hole_end_virt;
-		virtual_hole_end = hole_end_virt + memory_hole_align;
-		pr_info("Physical memory hole is not aligned. There will be a virtual memory hole from %lx to %lx\n",
-			virtual_hole_start, virtual_hole_end);
-	}
+	membank0_size = meminfo.bank[0].size;
+	membank1_start = meminfo.bank[1].start;
 }
-
 #endif
 
 void __init arm_memblock_init(struct meminfo *mi, struct machine_desc *mdesc)
 {
 	int i;
 
+#ifndef CONFIG_DONT_MAP_HOLE_AFTER_MEMBANK0
 	sort(&meminfo.bank, meminfo.nr_banks, sizeof(meminfo.bank[0]), meminfo_cmp, NULL);
+#endif
 
 	for (i = 0; i < mi->nr_banks; i++)
 		memblock_add(mi->bank[i].start, mi->bank[i].size);
@@ -823,9 +760,6 @@ void __init mem_init(void)
 
 	printk(KERN_NOTICE "Virtual kernel memory layout:\n"
 			"    vector  : 0x%08lx - 0x%08lx   (%4ld kB)\n"
-#ifdef CONFIG_ARM_USE_USER_ACCESSIBLE_TIMERS
-			"    timers  : 0x%08lx - 0x%08lx   (%4ld kB)\n"
-#endif
 #ifdef CONFIG_HAVE_TCM
 			"    DTCM    : 0x%08lx - 0x%08lx   (%4ld kB)\n"
 			"    ITCM    : 0x%08lx - 0x%08lx   (%4ld kB)\n"
@@ -846,11 +780,6 @@ void __init mem_init(void)
 
 			MLK(UL(CONFIG_VECTORS_BASE), UL(CONFIG_VECTORS_BASE) +
 				(PAGE_SIZE)),
-#ifdef CONFIG_ARM_USE_USER_ACCESSIBLE_TIMERS
-			MLK(UL(CONFIG_ARM_USER_ACCESSIBLE_TIMER_BASE),
-				UL(CONFIG_ARM_USER_ACCESSIBLE_TIMER_BASE)
-					+ (PAGE_SIZE)),
-#endif
 #ifdef CONFIG_HAVE_TCM
 			MLK(DTCM_OFFSET, (unsigned long) dtcm_end),
 			MLK(ITCM_OFFSET, (unsigned long) itcm_end),
@@ -912,14 +841,6 @@ void free_initmem(void)
 				    "TCM link");
 #endif
 
-#ifdef CONFIG_STRICT_MEMORY_RWX
-	poison_init_mem((char *)__arch_info_begin,
-		__init_end - (char *)__arch_info_begin);
-	reclaimed_initmem = free_area(__phys_to_pfn(__pa(__arch_info_begin)),
-				    __phys_to_pfn(__pa(__init_end)),
-				    "init");
-	totalram_pages += reclaimed_initmem;
-#else
 	poison_init_mem(__init_begin, __init_end - __init_begin);
 	if (!machine_is_integrator() && !machine_is_cintegrator()) {
 		reclaimed_initmem = free_area(__phys_to_pfn(__pa(__init_begin)),
@@ -927,7 +848,6 @@ void free_initmem(void)
 					    "init");
 		totalram_pages += reclaimed_initmem;
 	}
-#endif
 }
 
 #ifdef CONFIG_BLK_DEV_INITRD
