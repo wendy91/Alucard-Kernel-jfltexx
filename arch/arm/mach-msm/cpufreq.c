@@ -309,7 +309,7 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	cpumask_clear(mask);
 	cpumask_set_cpu(policy->cpu, mask);
 	if (cpumask_equal(mask, &current->cpus_allowed)) {
-		ret = set_cpu_freq(cpu_work->policy, cpu_work->frequency);
+		ret = set_cpu_freq(cpu_work->policy, cpu_work->frequency, cpu_work->index);
 		goto done;
 	} else {
 		cancel_work_sync(&cpu_work->work);
@@ -394,9 +394,9 @@ int msm_cpufreq_set_freq_limits(uint32_t cpu, uint32_t min, uint32_t max)
 	else
 		limit->allowed_max = limit->max;
 
-	pr_debug("%s: Limiting cpu %d min = %d, max = %d\n",
-			__func__, cpu,
-			limit->allowed_min, limit->allowed_max);
+	//pr_debug("%s: Limiting cpu %d min = %d, max = %d\n",
+	//		__func__, cpu,
+	//		limit->allowed_min, limit->allowed_max);
 
 	return 0;
 }
