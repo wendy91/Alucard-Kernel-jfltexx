@@ -26,7 +26,7 @@ XML2CHECK="${INITRAMFS_SOURCE}/res/customconfig/customconfig.xml";
 xmllint --noout $XML2CHECK;
 if [ $? == 1 ]; then
 	echo "xml-Error: $XML2CHECK";
-#	exit 1;
+	exit 1;
 fi;
 
 echo "Setup Package Directory"

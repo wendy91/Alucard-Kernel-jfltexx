@@ -97,7 +97,7 @@ static u64 sampling_rate_boosted_time;
 static unsigned int current_sampling_rate = DEF_SAMPLING_RATE;
 
 #ifdef CONFIG_CPUFREQ_ID_PERFLOCK
-static unsigned int saved_policy_min = 1;
+static unsigned int saved_policy_min = 0;
 #endif
 
 static void do_dbs_timer(struct work_struct *work);

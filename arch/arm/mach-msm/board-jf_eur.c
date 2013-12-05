@@ -206,6 +206,10 @@ static void sensor_power_on_vdd(int, int);
 #define PCIE_PWR_EN_PMIC_GPIO 13
 #define PCIE_RST_N_PMIC_MPP 1
 
+#ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND  
+int id_set_two_phase_freq(int cpufreq); 
+#endif 
+
 static int sec_tsp_synaptics_mode;
 static int lcd_tsp_panel_version;
 
@@ -2135,7 +2139,6 @@ static int ssp_check_changes(void)
 */
 static void ssp_get_positions(int *acc, int *mag)
 {
-#if !defined(CONFIG_MACH_JF_CMCCCSFB)
 	if (system_rev == BOARD_REV13)
 		*acc = MPU6500_TOP_RIGHT_UPPER;
 	else if (system_rev > BOARD_REV09)
@@ -2144,15 +2147,7 @@ static void ssp_get_positions(int *acc, int *mag)
 		*acc = MPU6500_TOP_RIGHT_UPPER;
 	else
 		*acc = MPU6500_BOTTOM_RIGHT_UPPER;
-#else
-	if (system_rev > BOARD_REV09)
-		*acc = K330_TOP_LEFT_UPPER;
-	else if (system_rev > BOARD_REV04)
-		*acc = MPU6500_TOP_RIGHT_UPPER;
-	else
-		*acc = MPU6500_BOTTOM_RIGHT_UPPER;
 
-#endif
 	if (system_rev > BOARD_REV06)
 		*mag = YAS532_BOTTOM_RIGHT_LOWER;
 	else if (system_rev > BOARD_REV03)
@@ -3196,9 +3191,19 @@ static struct platform_device msm_tsens_device = {
 static struct msm_thermal_data msm_thermal_pdata = {
 	.sensor_id = 0,
 	.poll_ms = 250,
+#ifdef CONFIG_CPU_OVERCLOCK
+	.limit_temp_degC = 70,
+#else
 	.limit_temp_degC = 60,
+#endif
 	.temp_hysteresis_degC = 10,
 	.freq_step = 2,
+#ifdef CONFIG_INTELLI_THERMAL
+	.freq_control_mask = 0xf,
+	.core_limit_temp_degC = 80,
+	.core_temp_hysteresis_degC = 10,
+	.core_control_mask = 0xe,
+#endif
 };
 
 #define MSM_SHARED_RAM_PHYS 0x80000000
@@ -5359,6 +5364,9 @@ static void __init samsung_jf_init(void)
 	clear_ssp_gpio();
 	sensor_power_on_vdd(SNS_PWR_ON, SNS_PWR_ON);
 	initialize_ssp_gpio();
+#endif
+#ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND
+	id_set_two_phase_freq(1566000);
 #endif
 #ifdef CONFIG_MACH_JF
 	platform_device_register(&gpio_kp_pdev);
