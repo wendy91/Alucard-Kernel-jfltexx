@@ -395,6 +395,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-unused-variable -Wno-t
 		   -Wno-format-security \
 		   -Wno-maybe-uninitialized \
 		   -Wno-sizeof-pointer-memaccess \
+		   -Wno-unused-local-typedefs \
 		   -fno-delete-null-pointer-checks \
 		   -fno-schedule-insns2
 ifdef CONFIG_CC_OPTIMIZE_ALOT

@@ -799,4 +799,4 @@ TRACE_EVENT(kgsl_active_count,
 #endif /* _KGSL_TRACE_H */
 
 /* This part must be outside protection */
-#include <trace/define_trace.h>
+//#include <trace/define_trace.h>
