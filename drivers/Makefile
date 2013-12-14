@@ -146,9 +146,13 @@ obj-$(CONFIG_SENSORS_SSP)	+= sensorhub/
 obj-$(CONFIG_VIBETONZ)          += motor/
 obj-$(CONFIG_SEC_FPGA)	+= barcode_emul/
 obj-$(CONFIG_IRDA_MC96)		+= irda/
+obj-$(CONFIG_NLS_UTF8)		+= exfat/
 
 obj-$(CONFIG_AUTHENTEC_VPNCLIENT_INTERCEPTOR) += interceptor/
 
 obj-$(CONFIG_FELICA) += felica/
-obj-y   			+= exfat/
+
+ifeq (1, $(shell if [ -d drivers/exfat ] ; then echo 1 ; fi))
+	obj-y   += exfat/
+endif
 
