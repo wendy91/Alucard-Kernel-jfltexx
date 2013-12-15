@@ -1668,7 +1668,7 @@ static unsigned int sec_bat_get_polling_time(
 		break;
 	case POWER_SUPPLY_STATUS_FULL:
 		if ((battery->pdata->full_condition_type &
-			SEC_BATTERY_FULL_CONDITION_SLEEPINFULL) &&
+			SEC_BATTERY_FULL_CONDITION_NOSLEEPINFULL) &&
 			battery->polling_in_sleep) {
 			if (battery->charging_mode ==
 				SEC_BATTERY_CHARGING_NONE)
