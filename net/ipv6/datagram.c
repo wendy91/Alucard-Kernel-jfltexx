@@ -416,7 +416,6 @@ out_free_skb:
 out:
 	return err;
 }
-
 /*
  *	Handle IPV6_RECVPATHMTU
  */

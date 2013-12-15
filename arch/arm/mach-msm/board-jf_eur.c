@@ -5365,7 +5365,7 @@ static void __init samsung_jf_init(void)
 	bcm2079x_init();
 	nfc_gpio_rev_init();
 #endif
-	change_memory_power = &apq8064_change_memory_power;
+	change_memory_power = (int)&apq8064_change_memory_power;
 
 #ifndef CONFIG_MACH_JF
 	if (machine_is_mpq8064_cdp()) {

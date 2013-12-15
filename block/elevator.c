@@ -1094,7 +1094,7 @@ ssize_t elv_iosched_store(struct request_queue *q, const char *name,
 	ret = __elevator_change(q, name);
 	globalq[q->index] = q;
 	//pr_alert("IOSCHED_STORE: %s-%s-%s-%d\n", name, q->elevator->type->elevator_name, globalq[q->index]->elevator->type->elevator_name, q->index);
-	set_cur_sched(name);
+	//set_cur_sched(name);
 	
 	if (!ret)
 		return count;
