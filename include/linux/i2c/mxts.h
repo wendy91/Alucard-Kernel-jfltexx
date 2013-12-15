@@ -350,6 +350,7 @@ enum {
 #include <linux/cpufreq.h>
 #define TOUCH_BOOSTER_OFF_TIME	100
 #define TOUCH_BOOSTER_CHG_TIME	200
+
 #endif
 
 struct mxt_callbacks {
