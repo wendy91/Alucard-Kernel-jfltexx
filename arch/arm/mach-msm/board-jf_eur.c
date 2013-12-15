@@ -513,13 +513,6 @@ static struct platform_device apq8064_android_pmem_audio_device = {
 #endif /* CONFIG_MSM_MULTIMEDIA_USE_ION */
 #endif /* CONFIG_ANDROID_PMEM */
 
-#ifdef CONFIG_BATTERY_BCL
-static struct platform_device battery_bcl_device = {
-	.name = "battery_current_limit",
-	.id = -1,
-	};
-#endif
-
 struct fmem_platform_data apq8064_fmem_pdata = {
 };
 
@@ -1208,11 +1201,11 @@ static void cypress_gpio_init(void)
 */
 #endif
 
-/*static int apq8064_change_memory_power(u64 start, u64 size,
+static int apq8064_change_memory_power(u64 start, u64 size,
 	int change_type)
 {
 	return soc_change_memory_power(start, size, change_type);
-}*/
+}
 
 static char prim_panel_name[PANEL_NAME_MAX_LEN];
 static char ext_panel_name[PANEL_NAME_MAX_LEN];
@@ -3185,21 +3178,11 @@ static struct platform_device msm_tsens_device = {
 };
 
 static struct msm_thermal_data msm_thermal_pdata = {
-	.sensor_id = 0,
+	.sensor_id = 7,
 	.poll_ms = 250,
-#ifdef CONFIG_CPU_OVERCLOCK
-	.limit_temp_degC = 70,
-#else
 	.limit_temp_degC = 60,
-#endif
 	.temp_hysteresis_degC = 10,
 	.freq_step = 2,
-#ifdef CONFIG_INTELLI_THERMAL
-	.freq_control_mask = 0xf,
-	.core_limit_temp_degC = 80,
-	.core_temp_hysteresis_degC = 10,
-	.core_control_mask = 0xe,
-#endif
 };
 
 #define MSM_SHARED_RAM_PHYS 0x80000000
@@ -5374,7 +5357,7 @@ static void __init samsung_jf_init(void)
 	bcm2079x_init();
 	nfc_gpio_rev_init();
 #endif
-/*	change_memory_power = &apq8064_change_memory_power;*/
+	change_memory_power = &apq8064_change_memory_power;
 
 #ifndef CONFIG_MACH_JF
 	if (machine_is_mpq8064_cdp()) {

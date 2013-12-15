@@ -60,7 +60,9 @@
 #include <linux/exportfs.h>
 #include <linux/mount.h>
 #include <linux/vfs.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 #include <linux/aio.h>
+#endif
 #include <linux/parser.h>
 #include <linux/uio.h>
 #include <linux/writeback.h>
@@ -1335,7 +1337,8 @@ static int exfat_write_end(struct file *file, struct address_space *mapping,
 }
 
 static ssize_t exfat_direct_IO(int rw, struct kiocb *iocb,
-				struct iov_iter *iter, loff_t offset)
+					   const struct iovec *iov,
+					   loff_t offset, unsigned long nr_segs)
 {
 	struct inode *inode = iocb->ki_filp->f_mapping->host;
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,34)
@@ -1344,13 +1347,12 @@ static ssize_t exfat_direct_IO(int rw, struct kiocb *iocb,
 	ssize_t ret;
 
 	if (rw == WRITE) {
-		if (EXFAT_I(inode)->mmu_private <
-			(offset + iov_iter_count(iter)))
+		if (EXFAT_I(inode)->mmu_private < (offset + iov_length(iov, nr_segs)))
 			return 0;
 	}
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,00)
-	ret = blockdev_direct_IO(rw, iocb, inode, iter, offset,
-				 exfat_get_block);
+	ret = blockdev_direct_IO(rw, iocb, inode, iov,
+					offset, nr_segs, exfat_get_block);
 #else
         ret = blockdev_direct_IO(rw, iocb, inode, inode->i_sb->s_bdev, iov,
 					offset, nr_segs, exfat_get_block, NULL);
@@ -1358,7 +1360,7 @@ static ssize_t exfat_direct_IO(int rw, struct kiocb *iocb,
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,34)
 	if ((ret < 0) && (rw & WRITE))
-		exfat_write_failed(mapping, offset+iov_iter_count(iter));
+		exfat_write_failed(mapping, offset+iov_length(iov, nr_segs));
 #endif
 	return ret;
 
