@@ -148,6 +148,35 @@ static unsigned long lowmem_deathpending_timeout;
 			printk(x);			\
 	} while (0)
 
+static bool avoid_to_kill(uid_t uid)
+{
+
+	if (uid == 0 || /* root */
+		uid == 1001 || /* radio */
+		uid == 1002 || /* bluetooth */
+		uid == 1010 || /* wifi */
+		uid == 1012 || /* install */
+		uid == 1013 || /* media */
+		uid == 1014 || /* dhcp */
+		uid == 1017 || /* keystore */
+		uid == 1019)	/* drm */
+	{
+		return 1;
+	}
+	return 0;
+}
+
+static bool protected_apps(char *comm)
+{
+	if (strcmp(comm, "d.process.acore") == 0 ||
+		strcmp(comm, "ndroid.systemui") == 0 ||
+		strcmp(comm, "ndroid.contacts") == 0 ||
+		strcmp(comm, "d.process.media") == 0) {
+		return 1;
+	}
+	return 0;
+}
+
 int can_use_cma_pages(gfp_t gfp_mask)
 {
 	int can_use = 0;
@@ -182,6 +211,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #else
 	struct task_struct *selected = NULL;
 #endif
+	const struct cred *pcred; 
+	unsigned int uid = 0;
 	int rem = 0;
 	int tasksize;
 	int i;
@@ -271,6 +302,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		if (tasksize <= 0)
 			continue;
 
+		pcred = __task_cred(p);
+		uid = pcred->uid;
 #ifdef ENHANCED_LMK_ROUTINE
 		if (all_selected_oom < LOWMEM_DEATHPENDING_DEPTH) {
 			for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
@@ -287,26 +320,32 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		}
 
 		if (is_exist_oom_task) {
-			selected[max_selected_oom_idx] = p;
-			selected_tasksize[max_selected_oom_idx] = tasksize;
-			selected_oom_score_adj[max_selected_oom_idx] = oom_score_adj;
+			if ((!avoid_to_kill(uid) && !protected_apps(p->comm)) ||
+				tasksize * (long)(PAGE_SIZE / 1024) >= 80000) {
+					selected[max_selected_oom_idx] = p;
+					selected_tasksize[max_selected_oom_idx] = tasksize;
+					selected_oom_score_adj[max_selected_oom_idx] = oom_score_adj;
 
-			if (all_selected_oom < LOWMEM_DEATHPENDING_DEPTH)
-				all_selected_oom++;
+					if (all_selected_oom < LOWMEM_DEATHPENDING_DEPTH)
+						all_selected_oom++;
 
-			if (all_selected_oom == LOWMEM_DEATHPENDING_DEPTH) {
-				for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
-					if (selected_oom_score_adj[i] < selected_oom_score_adj[max_selected_oom_idx])
-						max_selected_oom_idx = i;
-					else if (selected_oom_score_adj[i] == selected_oom_score_adj[max_selected_oom_idx] &&
-						selected_tasksize[i] < selected_tasksize[max_selected_oom_idx])
-						max_selected_oom_idx = i;
-				}
+					if (all_selected_oom == LOWMEM_DEATHPENDING_DEPTH) {
+						for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
+							if (selected_oom_score_adj[i] < selected_oom_score_adj[max_selected_oom_idx])
+								max_selected_oom_idx = i;
+							else if (selected_oom_score_adj[i] == selected_oom_score_adj[max_selected_oom_idx] &&
+								selected_tasksize[i] < selected_tasksize[max_selected_oom_idx])
+								max_selected_oom_idx = i;
+						}
+					}
+
+					lowmem_print(2, "select %d (%s), adj %d, \
+							size %d, to kill\n",
+						p->pid, p->comm, oom_score_adj, tasksize);
+			} else {
+					lowmem_print(3, "selected skipped '%s' (%d), adj %hd, size %ldkB, no to kill\n",
+					 p->comm, p->pid, oom_score_adj, tasksize * (long)(PAGE_SIZE / 1024));
 			}
-
-			lowmem_print(2, "select %d (%s), adj %d, \
-					size %d, to kill\n",
-				p->pid, p->comm, oom_score_adj, tasksize);
 		}
 #else
 		if (selected) {
@@ -316,11 +355,19 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			    tasksize <= selected_tasksize)
 				continue;
 		}
-		selected = p;
-		selected_tasksize = tasksize;
-		selected_oom_score_adj = oom_score_adj;
-		lowmem_print(2, "select %d (%s), adj %d, size %d, to kill\n",
-			     p->pid, p->comm, oom_score_adj, tasksize);
+
+		if ((!avoid_to_kill(uid) && !protected_apps(p->comm)) ||
+				tasksize * (long)(PAGE_SIZE / 1024) >= 80000) {
+			selected = p;
+			selected_tasksize = tasksize;
+			selected_oom_score_adj = oom_score_adj;
+			lowmem_print(2, "select %d (%s), adj %d, size %d, to kill\n",
+					 p->pid, p->comm, oom_score_adj, tasksize);
+		} else {
+			lowmem_print(3, "selected skipped '%s' (%d), adj %hd, size %ldkB, no to kill\n",
+				 p->comm, p->pid, oom_score_adj, tasksize * (long)(PAGE_SIZE / 1024));
+		}
+		
 #endif
 	}
 #ifdef ENHANCED_LMK_ROUTINE
