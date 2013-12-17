@@ -2093,11 +2093,11 @@ static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 
 					if (target_freq != policy->cur)
 						__cpufreq_driver_target(policy, target_freq, CPUFREQ_RELATION_L);
-					
-					cpufreq_cpu_put(policy);				
+
+					cpufreq_cpu_put(policy);
 				}
 			}
-#endif			
+#endif
 			break;
 		case CPU_DOWN_PREPARE:
 		case CPU_DOWN_PREPARE_FROZEN:
