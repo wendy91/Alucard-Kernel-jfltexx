@@ -949,7 +949,8 @@ u16 cfg80211_calculate_bitrate(struct rate_info *rate)
 {
 	int modulation, streams, bitrate;
 
-	if (!(rate->flags & RATE_INFO_FLAGS_MCS))
+	if (!(rate->flags & RATE_INFO_FLAGS_MCS) &&
+	    !(rate->flags & RATE_INFO_FLAGS_VHT_MCS))
 		return rate->legacy;
 
 	if (rate->flags & RATE_INFO_FLAGS_VHT_MCS)
