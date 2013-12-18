@@ -584,10 +584,7 @@ static void bluesleep_stop_wq(struct work_struct *work)
 
 	if (test_bit(BT_ASLEEP, &flags)) {
 		clear_bit(BT_ASLEEP, &flags);
-		spin_unlock_irqrestore(&rw_lock, irq_flags);
 		hsuart_power(1);
-	} else {
-		spin_unlock_irqrestore(&rw_lock, irq_flags);
 	}
 
 	atomic_inc(&open_count);
