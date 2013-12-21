@@ -377,7 +377,7 @@ void could_cswap(void)
 	if (atomic_read(&s_reclaim.lmk_running) == 1 || atomic_read(&kswapd_thread_on) == 1) 
 		return;
 
-	if (atomic_long_read(&nr_swap_pages) < minimum_freeswap_pages)
+	if (nr_swap_pages < minimum_freeswap_pages)
 		return;
 
 	if (unlikely(s_reclaim.kcompcached == NULL))
