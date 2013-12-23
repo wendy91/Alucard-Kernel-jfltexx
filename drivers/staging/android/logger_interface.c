@@ -18,7 +18,7 @@
 #include "logger_interface.h"
 
 
-int logger_mode;
+int logger_mode = 1; // 0 to disable, 1 to enable
 
 
 /* sysfs interface for logger mode */
@@ -64,12 +64,12 @@ static struct kobj_attribute logger_mode_attribute =
 __ATTR(logger_mode, 0666, logger_mode_show, logger_mode_store);
 
 static struct attribute *logger_mode_attrs[] = {
-&logger_mode_attribute.attr,
-NULL,
+	&logger_mode_attribute.attr,
+	NULL,
 };
 
 static struct attribute_group logger_mode_attr_group = {
-.attrs = logger_mode_attrs,
+	.attrs = logger_mode_attrs,
 };
 
 static struct kobject *logger_mode_kobj;
@@ -78,23 +78,20 @@ int logger_mode_init(void)
 {
 	int logger_mode_retval;
 
-        logger_mode_kobj = kobject_create_and_add("logger_mode", kernel_kobj);
+	logger_mode_kobj = kobject_create_and_add("logger_mode", kernel_kobj);
 
-        if (!logger_mode_kobj) {
-                return -ENOMEM;
-        }
+    if (!logger_mode_kobj) {
+    	return -ENOMEM;
+    }
 
-        logger_mode_retval = sysfs_create_group(logger_mode_kobj, &logger_mode_attr_group);
+    logger_mode_retval = sysfs_create_group(logger_mode_kobj, &logger_mode_attr_group);
 
-        if (logger_mode_retval)
-	{
-			kobject_put(logger_mode_kobj);
-	}
+    if (logger_mode_retval)
+    {
+    	kobject_put(logger_mode_kobj);
+    }
 
-	// initialize logger mode to 0 (disabled) as default
-	logger_mode = 0;
-
-        return (logger_mode_retval);
+    return (logger_mode_retval);
 }
 
 
