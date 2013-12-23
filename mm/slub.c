@@ -1317,13 +1317,7 @@ static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
 			stat(s, ORDER_FALLBACK);
 	}
 
-	if (flags & __GFP_WAIT)
-		local_irq_disable();
-
-	if (!page)
-		return NULL;
-
-	if (kmemcheck_enabled
+	if (kmemcheck_enabled && page
 		&& !(s->flags & (SLAB_NOTRACK | DEBUG_DEFAULT_FLAGS))) {
 		int pages = 1 << oo_order(oo);
 
@@ -1338,6 +1332,11 @@ static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
 		else
 			kmemcheck_mark_unallocated_pages(page, pages);
 	}
+
+	if (flags & __GFP_WAIT)
+		local_irq_disable();
+	if (!page)
+		return NULL;
 
 	page->objects = oo_objects(oo);
 	mod_zone_page_state(page_zone(page),
@@ -1372,7 +1371,7 @@ static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 
 	inc_slabs_node(s, page_to_nid(page), page->objects);
 	page->slab = s;
-	page->flags |= 1 << PG_slab;
+	__SetPageSlab(page);
 
 	start = page_address(page);
 
@@ -1493,12 +1492,12 @@ static inline void remove_partial(struct kmem_cache_node *n,
 }
 
 /*
- * Lock slab, remove from the partial list and put the object into the
- * per cpu freelist.
+ * Remove slab from the partial list, freeze it and
+ * return the pointer to the freelist.
  *
  * Returns a list of objects or NULL if it fails.
  *
- * Must hold list_lock.
+ * Must hold list_lock since we modify the partial list.
  */
 static inline void *acquire_slab(struct kmem_cache *s,
 		struct kmem_cache_node *n, struct page *page,
@@ -1513,22 +1512,24 @@ static inline void *acquire_slab(struct kmem_cache *s,
 	 * The old freelist is the list of objects for the
 	 * per cpu allocation list.
 	 */
-	do {
-		freelist = page->freelist;
-		counters = page->counters;
-		new.counters = counters;
-		if (mode)
-			new.inuse = page->objects;
+	freelist = page->freelist;
+	counters = page->counters;
+	new.counters = counters;
+	if (mode)
+		new.inuse = page->objects;
 
-		VM_BUG_ON(new.frozen);
-		new.frozen = 1;
+	VM_BUG_ON(new.frozen);
+	new.frozen = 1;
 
-	} while (!__cmpxchg_double_slab(s, page,
+	if (!__cmpxchg_double_slab(s, page,
 			freelist, counters,
 			NULL, new.counters,
-			"lock and freeze"));
+			"acquire_slab"))
+
+		return NULL;
 
 	remove_partial(n, page);
+	WARN_ON(!freelist);
 	return freelist;
 }
 
@@ -1720,7 +1721,7 @@ static inline void note_cmpxchg_failure(const char *n,
 	stat(s, CMPXCHG_DOUBLE_CPU_FAIL);
 }
 
-void init_kmem_cache_cpus(struct kmem_cache *s)
+static void init_kmem_cache_cpus(struct kmem_cache *s)
 {
 	int cpu;
 
@@ -1879,7 +1880,11 @@ redo:
 	}
 }
 
-/* Unfreeze all the cpu partial slabs */
+/*
+ * Unfreeze all the cpu partial slabs.
+ *
+ * This function must be called with interrupt disabled.
+ */
 static void unfreeze_partials(struct kmem_cache *s)
 {
 	struct kmem_cache_node *n = NULL;
@@ -1935,7 +1940,7 @@ static void unfreeze_partials(struct kmem_cache *s)
 				l = m;
 			}
 
-		} while (!cmpxchg_double_slab(s, page,
+		} while (!__cmpxchg_double_slab(s, page,
 				old.freelist, old.counters,
 				new.freelist, new.counters,
 				"unfreezing slab"));
@@ -1968,7 +1973,7 @@ static void unfreeze_partials(struct kmem_cache *s)
  * If we did not find a slot then simply move all the partials to the
  * per node partial list.
  */
-int put_cpu_partial(struct kmem_cache *s, struct page *page, int drain)
+static int put_cpu_partial(struct kmem_cache *s, struct page *page, int drain)
 {
 	struct page *oldpage;
 	int pages;
@@ -1991,6 +1996,7 @@ int put_cpu_partial(struct kmem_cache *s, struct page *page, int drain)
 				local_irq_save(flags);
 				unfreeze_partials(s);
 				local_irq_restore(flags);
+				oldpage = NULL;
 				pobjects = 0;
 				pages = 0;
 				stat(s, CPU_PARTIAL_DRAIN);
@@ -2130,7 +2136,7 @@ slab_out_of_memory(struct kmem_cache *s, gfp_t gfpflags, int nid)
 static inline void *new_slab_objects(struct kmem_cache *s, gfp_t flags,
 			int node, struct kmem_cache_cpu **pc)
 {
-	void *object;
+	void *freelist;
 	struct kmem_cache_cpu *c;
 	struct page *page = new_slab(s, flags, node);
 
@@ -2143,7 +2149,7 @@ static inline void *new_slab_objects(struct kmem_cache *s, gfp_t flags,
 		 * No other reference to the page yet so we can
 		 * muck around with it freely without cmpxchg
 		 */
-		object = page->freelist;
+		freelist = page->freelist;
 		page->freelist = NULL;
 
 		stat(s, ALLOC_SLAB);
@@ -2151,9 +2157,9 @@ static inline void *new_slab_objects(struct kmem_cache *s, gfp_t flags,
 		c->page = page;
 		*pc = c;
 	} else
-		object = NULL;
+		freelist = NULL;
 
-	return object;
+	return freelist;
 }
 
 /*
@@ -2163,6 +2169,8 @@ static inline void *new_slab_objects(struct kmem_cache *s, gfp_t flags,
  * The page is still frozen if the return value is not NULL.
  *
  * If this function returns NULL then the page has been unfrozen.
+ *
+ * This function must be called with interrupt disabled.
  */
 static inline void *get_freelist(struct kmem_cache *s, struct page *page)
 {
@@ -2173,13 +2181,14 @@ static inline void *get_freelist(struct kmem_cache *s, struct page *page)
 	do {
 		freelist = page->freelist;
 		counters = page->counters;
+
 		new.counters = counters;
 		VM_BUG_ON(!new.frozen);
 
 		new.inuse = page->objects;
 		new.frozen = freelist != NULL;
 
-	} while (!cmpxchg_double_slab(s, page,
+	} while (!__cmpxchg_double_slab(s, page,
 		freelist, counters,
 		NULL, new.counters,
 		"get_freelist"));
@@ -2206,7 +2215,7 @@ static inline void *get_freelist(struct kmem_cache *s, struct page *page)
 static void *__slab_alloc(struct kmem_cache *s, gfp_t gfpflags, int node,
 			  unsigned long addr, struct kmem_cache_cpu *c)
 {
-	void **object;
+	void *freelist;
 	unsigned long flags;
 
 	local_irq_save(flags);
@@ -2222,6 +2231,7 @@ static void *__slab_alloc(struct kmem_cache *s, gfp_t gfpflags, int node,
 	if (!c->page)
 		goto new_slab;
 redo:
+
 	if (unlikely(!node_match(c, node))) {
 		stat(s, ALLOC_NODE_MISMATCH);
 		deactivate_slab(s, c);
@@ -2229,15 +2239,15 @@ redo:
 	}
 
 	/* must check again c->freelist in case of cpu migration or IRQ */
-	object = c->freelist;
-	if (object)
+	freelist = c->freelist;
+	if (freelist)
 		goto load_freelist;
 
 	stat(s, ALLOC_SLOWPATH);
 
-	object = get_freelist(s, c->page);
+	freelist = get_freelist(s, c->page);
 
-	if (!object) {
+	if (!freelist) {
 		c->page = NULL;
 		stat(s, DEACTIVATE_BYPASS);
 		goto new_slab;
@@ -2246,10 +2256,10 @@ redo:
 	stat(s, ALLOC_REFILL);
 
 load_freelist:
-	c->freelist = get_freepointer(s, object);
+	c->freelist = get_freepointer(s, freelist);
 	c->tid = next_tid(c->tid);
 	local_irq_restore(flags);
-	return object;
+	return freelist;
 
 new_slab:
 
@@ -2263,13 +2273,13 @@ new_slab:
 	}
 
 	/* Then do expensive stuff like retrieving pages from the partial lists */
-	object = get_partial(s, gfpflags, node, c);
+	freelist = get_partial(s, gfpflags, node, c);
 
-	if (unlikely(!object)) {
+	if (unlikely(!freelist)) {
 
-		object = new_slab_objects(s, gfpflags, node, &c);
+		freelist = new_slab_objects(s, gfpflags, node, &c);
 
-		if (unlikely(!object)) {
+		if (unlikely(!freelist)) {
 			if (!(gfpflags & __GFP_NOWARN) && printk_ratelimit())
 				slab_out_of_memory(s, gfpflags, node);
 
@@ -2282,14 +2292,14 @@ new_slab:
 		goto load_freelist;
 
 	/* Only entered in the debug case */
-	if (!alloc_debug_processing(s, c->page, object, addr))
+	if (!alloc_debug_processing(s, c->page, freelist, addr))
 		goto new_slab;	/* Slab failed checks. Next slab needed */
 
-	c->freelist = get_freepointer(s, object);
+	c->freelist = get_freepointer(s, freelist);
 	deactivate_slab(s, c);
 	c->node = NUMA_NO_NODE;
 	local_irq_restore(flags);
-	return object;
+	return freelist;
 }
 
 /*
@@ -2445,7 +2455,6 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
 	void *prior;
 	void **object = (void *)x;
 	int was_frozen;
-	int inuse;
 	struct page new;
 	unsigned long counters;
 	struct kmem_cache_node *n = NULL;
@@ -2457,13 +2466,17 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
 		return;
 
 	do {
+		if (unlikely(n)) {
+			spin_unlock_irqrestore(&n->list_lock, flags);
+			n = NULL;
+		}
 		prior = page->freelist;
 		counters = page->counters;
 		set_freepointer(s, object, prior);
 		new.counters = counters;
 		was_frozen = new.frozen;
 		new.inuse--;
-		if ((!new.inuse || !prior) && !was_frozen && !n) {
+		if ((!new.inuse || !prior) && !was_frozen) {
 
 			if (!kmem_cache_debug(s) && !prior)
 
@@ -2488,7 +2501,6 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
 
 			}
 		}
-		inuse = new.inuse;
 
 	} while (!cmpxchg_double_slab(s, page,
 		prior, counters,
@@ -2514,25 +2526,17 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
                 return;
         }
 
-	/*
-	 * was_frozen may have been set after we acquired the list_lock in
-	 * an earlier loop. So we need to check it here again.
-	 */
-	if (was_frozen)
-		stat(s, FREE_FROZEN);
-	else {
-		if (unlikely(!inuse && n->nr_partial > s->min_partial))
-                        goto slab_empty;
+	if (unlikely(!new.inuse && n->nr_partial > s->min_partial))
+		goto slab_empty;
 
-		/*
-		 * Objects left in the slab. If it was not on the partial list before
-		 * then add it.
-		 */
-		if (unlikely(!prior)) {
-			remove_full(s, page);
-			add_partial(n, page, DEACTIVATE_TO_TAIL);
-			stat(s, FREE_ADD_PARTIAL);
-		}
+	/*
+	 * Objects left in the slab. If it was not on the partial list before
+	 * then add it.
+	 */
+	if (kmem_cache_debug(s) && unlikely(!prior)) {
+		remove_full(s, page);
+		add_partial(n, page, DEACTIVATE_TO_TAIL);
+		stat(s, FREE_ADD_PARTIAL);
 	}
 	spin_unlock_irqrestore(&n->list_lock, flags);
 	return;
@@ -3491,7 +3495,7 @@ void kfree(const void *x)
 	if (unlikely(!PageSlab(page))) {
 		BUG_ON(!PageCompound(page));
 		kmemleak_free(x);
-		put_page(page);
+		__free_pages(page, compound_order(page));
 		return;
 	}
 	slab_free(page->slab, page, object, _RET_IP_);
@@ -3586,7 +3590,7 @@ static void slab_mem_offline_callback(void *arg)
 	struct memory_notify *marg = arg;
 	int offline_node;
 
-	offline_node = marg->status_change_nid;
+	offline_node = marg->status_change_nid_normal;
 
 	/*
 	 * If the node still has available memory. we need kmem_cache_node
@@ -3619,7 +3623,7 @@ static int slab_mem_going_online_callback(void *arg)
 	struct kmem_cache_node *n;
 	struct kmem_cache *s;
 	struct memory_notify *marg = arg;
-	int nid = marg->status_change_nid;
+	int nid = marg->status_change_nid_normal;
 	int ret = 0;
 
 	/*
@@ -5426,7 +5430,7 @@ static int __init slab_sysfs_init(void)
 		err = sysfs_slab_alias(al->s, al->name);
 		if (err)
 			printk(KERN_ERR "SLUB: Unable to add boot slab alias"
-					" %s to sysfs\n", s->name);
+					" %s to sysfs\n", al->name);
 		kfree(al);
 	}
 

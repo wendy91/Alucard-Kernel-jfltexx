@@ -161,10 +161,9 @@ config ARM_TICKET_LOCKS
 
 config RWSEM_GENERIC_SPINLOCK
 	bool
-	default y
 
 config RWSEM_XCHGADD_ALGORITHM
-	bool
+	def_bool y
 
 config ARCH_HAS_ILOG2_U32
 	bool
@@ -1894,7 +1893,11 @@ config ENABLE_DMM
 
 config DONT_MAP_HOLE_AFTER_MEMBANK0
 	def_bool n
-	depends on SPARSEMEM
+	depends on ENABLE_VMALLOC_SAVING=n
+
+config ENABLE_VMALLOC_SAVING
+	def_bool n
+	depends on DONT_MAP_HOLE_AFTER_MEMBANK0=n
 
 config HOLES_IN_ZONE
 	def_bool n
