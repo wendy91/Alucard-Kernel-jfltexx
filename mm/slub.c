@@ -1500,37 +1500,39 @@ static inline void remove_partial(struct kmem_cache_node *n,
  * Must hold list_lock since we modify the partial list.
  */
 static inline void *acquire_slab(struct kmem_cache *s,
-		struct kmem_cache_node *n, struct page *page,
-		int mode)
+                struct kmem_cache_node *n, struct page *page,
+                int mode)
 {
-	void *freelist;
-	unsigned long counters;
-	struct page new;
+        void *freelist;
+        unsigned long counters;
+        struct page new;
 
-	/*
-	 * Zap the freelist and set the frozen bit.
-	 * The old freelist is the list of objects for the
-	 * per cpu allocation list.
-	 */
-	freelist = page->freelist;
-	counters = page->counters;
-	new.counters = counters;
-	if (mode)
-		new.inuse = page->objects;
+        /*
+         * Zap the freelist and set the frozen bit.
+         * The old freelist is the list of objects for the
+         * per cpu allocation list.
+         */
+        do {
+                freelist = page->freelist;
+                counters = page->counters;
+                new.counters = counters;
+                if (mode) {
+                        new.inuse = page->objects;
+                        new.freelist = NULL;
+                } else {
+                        new.freelist = freelist;
+                }
 
-	VM_BUG_ON(new.frozen);
-	new.frozen = 1;
+                VM_BUG_ON(new.frozen);
+                new.frozen = 1;
 
-	if (!__cmpxchg_double_slab(s, page,
-			freelist, counters,
-			NULL, new.counters,
-			"acquire_slab"))
+        } while (!__cmpxchg_double_slab(s, page,
+                        freelist, counters,
+                        new.freelist, new.counters,
+                        "lock and freeze"));
 
-		return NULL;
-
-	remove_partial(n, page);
-	WARN_ON(!freelist);
-	return freelist;
+        remove_partial(n, page);
+        return freelist;
 }
 
 static int put_cpu_partial(struct kmem_cache *s, struct page *page, int drain);
@@ -1563,12 +1565,10 @@ static void *get_partial_node(struct kmem_cache *s,
 
 		if (!object) {
 			c->page = page;
-			c->node = page_to_nid(page);
 			stat(s, ALLOC_FROM_PARTIAL);
 			object = t;
 			available =  page->objects - page->inuse;
 		} else {
-			page->freelist = t;
 			available = put_cpu_partial(s, page, 0);
 			stat(s, CPU_PARTIAL_NODE);
 		}
@@ -1887,18 +1887,24 @@ redo:
  */
 static void unfreeze_partials(struct kmem_cache *s)
 {
-	struct kmem_cache_node *n = NULL;
+	struct kmem_cache_node *n = NULL, *n2 = NULL;
 	struct kmem_cache_cpu *c = this_cpu_ptr(s->cpu_slab);
 	struct page *page, *discard_page = NULL;
 
 	while ((page = c->partial)) {
-		enum slab_modes { M_PARTIAL, M_FREE };
-		enum slab_modes l, m;
 		struct page new;
 		struct page old;
 
 		c->partial = page->next;
-		l = M_FREE;
+
+		n2 = get_node(s, page_to_nid(page));
+		if (n != n2) {
+			if (n)
+				spin_unlock(&n->list_lock);
+
+			n = n2;
+			spin_lock(&n->list_lock);
+		}
 
 		do {
 
@@ -1911,43 +1917,17 @@ static void unfreeze_partials(struct kmem_cache *s)
 
 			new.frozen = 0;
 
-			if (!new.inuse && (!n || n->nr_partial > s->min_partial))
-				m = M_FREE;
-			else {
-				struct kmem_cache_node *n2 = get_node(s,
-							page_to_nid(page));
-
-				m = M_PARTIAL;
-				if (n != n2) {
-					if (n)
-						spin_unlock(&n->list_lock);
-
-					n = n2;
-					spin_lock(&n->list_lock);
-				}
-			}
-
-			if (l != m) {
-				if (l == M_PARTIAL) {
-					remove_partial(n, page);
-					stat(s, FREE_REMOVE_PARTIAL);
-				} else {
-					add_partial(n, page,
-						DEACTIVATE_TO_TAIL);
-					stat(s, FREE_ADD_PARTIAL);
-				}
-
-				l = m;
-			}
-
 		} while (!__cmpxchg_double_slab(s, page,
 				old.freelist, old.counters,
 				new.freelist, new.counters,
 				"unfreezing slab"));
 
-		if (m == M_FREE) {
+		if (unlikely(!new.inuse && n->nr_partial > s->min_partial)) {
 			page->next = discard_page;
 			discard_page = page;
+		} else {
+			add_partial(n, page, DEACTIVATE_TO_TAIL);
+			stat(s, FREE_ADD_PARTIAL);
 		}
 	}
 
@@ -2064,7 +2044,7 @@ static void flush_all(struct kmem_cache *s)
 static inline int node_match(struct kmem_cache_cpu *c, int node)
 {
 #ifdef CONFIG_NUMA
-	if (node != NUMA_NO_NODE && c->node != node)
+	if (node != NUMA_NO_NODE && page_to_nid(c->page) != node)
 		return 0;
 #endif
 	return 1;
@@ -2153,7 +2133,6 @@ static inline void *new_slab_objects(struct kmem_cache *s, gfp_t flags,
 		page->freelist = NULL;
 
 		stat(s, ALLOC_SLAB);
-		c->node = page_to_nid(page);
 		c->page = page;
 		*pc = c;
 	} else
@@ -2256,6 +2235,12 @@ redo:
 	stat(s, ALLOC_REFILL);
 
 load_freelist:
+	/*
+	 * freelist is pointing to the list of objects to be used.
+	 * page is pointing to the page from which the objects are obtained.
+	 * That page must be frozen for per cpu allocations to work.
+	 */
+	VM_BUG_ON(!c->page->frozen);
 	c->freelist = get_freepointer(s, freelist);
 	c->tid = next_tid(c->tid);
 	local_irq_restore(flags);
@@ -2266,7 +2251,6 @@ new_slab:
 	if (c->partial) {
 		c->page = c->partial;
 		c->partial = c->page->next;
-		c->node = page_to_nid(c->page);
 		stat(s, CPU_PARTIAL_ALLOC);
 		c->freelist = NULL;
 		goto redo;
@@ -2275,17 +2259,15 @@ new_slab:
 	/* Then do expensive stuff like retrieving pages from the partial lists */
 	freelist = get_partial(s, gfpflags, node, c);
 
-	if (unlikely(!freelist)) {
-
+	if (!freelist)
 		freelist = new_slab_objects(s, gfpflags, node, &c);
 
-		if (unlikely(!freelist)) {
-			if (!(gfpflags & __GFP_NOWARN) && printk_ratelimit())
-				slab_out_of_memory(s, gfpflags, node);
+	if (unlikely(!freelist)) {
+		if (!(gfpflags & __GFP_NOWARN) && printk_ratelimit())
+			slab_out_of_memory(s, gfpflags, node);
 
-			local_irq_restore(flags);
-			return NULL;
-		}
+		local_irq_restore(flags);
+		return NULL;
 	}
 
 	if (likely(!kmem_cache_debug(s)))
@@ -2297,7 +2279,6 @@ new_slab:
 
 	c->freelist = get_freepointer(s, freelist);
 	deactivate_slab(s, c);
-	c->node = NUMA_NO_NODE;
 	local_irq_restore(flags);
 	return freelist;
 }
@@ -4522,30 +4503,31 @@ static ssize_t show_slab_objects(struct kmem_cache *s,
 
 		for_each_possible_cpu(cpu) {
 			struct kmem_cache_cpu *c = per_cpu_ptr(s->cpu_slab, cpu);
-			int node = ACCESS_ONCE(c->node);
+			int node;
 			struct page *page;
 
-			if (node < 0)
-				continue;
 			page = ACCESS_ONCE(c->page);
-			if (page) {
-				if (flags & SO_TOTAL)
-					x = page->objects;
-				else if (flags & SO_OBJECTS)
-					x = page->inuse;
-				else
-					x = 1;
+			if (!page)
+				continue;
 
-				total += x;
-				nodes[node] += x;
-			}
-			page = c->partial;
+			node = page_to_nid(page);
+			if (flags & SO_TOTAL)
+				x = page->objects;
+			else if (flags & SO_OBJECTS)
+				x = page->inuse;
+			else
+				x = 1;
 
+			total += x;
+			nodes[node] += x;
+
+			page = ACCESS_ONCE(c->partial);
 			if (page) {
 				x = page->pobjects;
 				total += x;
 				nodes[node] += x;
 			}
+
 			per_cpu[node]++;
 		}
 	}
