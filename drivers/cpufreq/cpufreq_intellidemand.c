@@ -479,8 +479,7 @@ static void update_sampling_rate(unsigned int new_rate)
 {
 	int cpu;
 
-	dbs_tuners_ins.sampling_rate = new_rate
-				     = max(new_rate, min_sampling_rate);
+	dbs_tuners_ins.sampling_rate = max(new_rate, min_sampling_rate);
 
 	for_each_online_cpu(cpu) {
 		struct cpufreq_policy *policy;
@@ -1720,7 +1719,7 @@ static void dbs_input_event(struct input_handle *handle, unsigned int type,
 		}
 
 		if (current_sampling_rate > BOOSTED_SAMPLING_RATE) {
-			dbs_tuners_ins.sampling_rate = BOOSTED_SAMPLING_RATE;
+			//dbs_tuners_ins.sampling_rate = BOOSTED_SAMPLING_RATE;
 			sampling_rate_boosted_time = ktime_to_us(ktime_get());
 			sampling_rate_boosted = 1;
 		}
