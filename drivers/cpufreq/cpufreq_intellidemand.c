@@ -479,8 +479,7 @@ static void update_sampling_rate(unsigned int new_rate)
 {
 	int cpu;
 
-	dbs_tuners_ins.sampling_rate = new_rate
-				     = max(new_rate, min_sampling_rate);
+	dbs_tuners_ins.sampling_rate = max(new_rate, min_sampling_rate);
 
 	for_each_online_cpu(cpu) {
 		struct cpufreq_policy *policy;
@@ -1236,13 +1235,6 @@ enum {
 	SET_MAX
 };
 
-enum {
-	BOOT_CPU = 0,
-	NON_BOOT_CPU1,
-	NON_BOOT_CPU2,
-	NON_BOOT_CPU3,
-};
-
 #define SAMPLE_DURATION_MSEC	(10*1000) // 10 secs >= 10000 msec
 #define ACTIVE_DURATION_MSEC	(3*60*1000) // 3 mins
 #define INACTIVE_DURATION_MSEC	(1*60*1000) // 1 mins
@@ -1727,7 +1719,7 @@ static void dbs_input_event(struct input_handle *handle, unsigned int type,
 		}
 
 		if (current_sampling_rate > BOOSTED_SAMPLING_RATE) {
-			dbs_tuners_ins.sampling_rate = BOOSTED_SAMPLING_RATE;
+			//dbs_tuners_ins.sampling_rate = BOOSTED_SAMPLING_RATE;
 			sampling_rate_boosted_time = ktime_to_us(ktime_get());
 			sampling_rate_boosted = 1;
 		}

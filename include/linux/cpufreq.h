@@ -22,6 +22,8 @@
 #include <asm/div64.h>
 
 #define CPUFREQ_NAME_LEN 16
+/* Print length for names. Extra 1 space for accomodating '\n' in prints */
+#define CPUFREQ_NAME_PLEN (CPUFREQ_NAME_LEN + 1)
 
 
 /*********************************************************************
@@ -353,6 +355,9 @@ static inline unsigned int cpufreq_quick_get_max(unsigned int cpu)
 #ifdef CONFIG_SEC_DVFS
 enum {
 	BOOT_CPU = 0,
+	NON_BOOT_CPU1,
+	NON_BOOT_CPU2,
+	NON_BOOT_CPU3,
 };
 
 int get_max_freq(void);
