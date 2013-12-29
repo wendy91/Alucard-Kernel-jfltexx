@@ -427,6 +427,7 @@ VREG_CONSUMERS(NCP) = {
 };
 VREG_CONSUMERS(EXT_5V) = {
 	REGULATOR_SUPPLY("ext_5v",		NULL),
+	REGULATOR_SUPPLY("ext_ddr3",		NULL),
 	REGULATOR_SUPPLY("vbus",		"msm_ehci_host.0"),
 };
 
@@ -462,6 +463,7 @@ VREG_CONSUMERS(L36) = {
 };
 VREG_CONSUMERS(BOOST) = {
 	REGULATOR_SUPPLY("8917_boost",		NULL),
+	REGULATOR_SUPPLY("ext_ddr3",		NULL),
 	REGULATOR_SUPPLY("vbus",		"msm_ehci_host.0"),
 	REGULATOR_SUPPLY("hdmi_mvs",		"hdmi_msm.0"),
 };
@@ -876,7 +878,7 @@ apq8064_rpm_regulator_init_data[] __devinitdata = {
 	RPM_LDO(L24, 0, 1, 1,  750000, 1150000, "8921_s1", 10000, 10000),
 	RPM_LDO(L25, 1, 1, 0, 1250000, 1250000, "8921_s1", 10000, 10000),
 	RPM_LDO(L27, 0, 0, 0, 1100000, 1100000, "8921_s7",     0,     0),
-	RPM_LDO(L28, 0, 1, 0, 1100000, 1100000, "8921_s7",     0,     0),
+	RPM_LDO(L28, 0, 1, 0, 1100000, 1200000, "8921_s7",     0,     0),
 	RPM_LDO(L29, 0, 1, 0, 1800000, 1800000, NULL,          0,     0),
 
 	/*     ID  a_on pd ss                   supply */
