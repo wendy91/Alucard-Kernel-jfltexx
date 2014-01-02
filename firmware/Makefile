@@ -146,6 +146,8 @@ fw-shipped-$(CONFIG_SENSORS_SSP) += ssp_crashed.fw
 
 
 #for TSP firmware
+fw-shipped-$(CONFIG_TOUCHSCREEN_ATMEL_MXTS) += tsp_atmel/mXT540S.fw
+fw-shipped-$(CONFIG_TOUCHSCREEN_ATMEL_MXTS) += tsp_atmel/mXT540Si.fw
 fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI) += tsp_synaptics/synaptics_a1.fw
 fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI) += tsp_synaptics/synaptics_b0_3_4.fw
 fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI) += tsp_synaptics/synaptics_b0_4_0.fw

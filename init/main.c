@@ -238,8 +238,8 @@ early_param("loglevel", loglevel);
  static int __init battStatus(char *str)
 {
 	int batt_val;
-  
-	
+
+
 	if (get_option(&str, &batt_val)) {
 		console_batt_stat = batt_val;
 		return 0;
