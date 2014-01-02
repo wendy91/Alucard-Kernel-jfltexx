@@ -129,7 +129,11 @@ static int set_vibetonz(int timeout)
 	} else {
 		DbgOut((KERN_INFO "tspdrv: ENABLE\n"));
 		if (vibrator_drvdata.vib_model == HAPTIC_PWM) {
-			strength = 119;
+			#if defined(CONFIG_MACH_JF_TMO)
+				strength = 79;
+			#else
+				strength = 119;
+			#endif
 			/* 90% duty cycle */
 			ImmVibeSPI_ForceOut_SetSamples(0, 8, 1, &strength);
 		} else { /* HAPTIC_MOTOR */
@@ -209,10 +213,34 @@ static void vibetonz_start(void)
 	timer.function = vibetonz_timer_func;
 
 	ret = timed_output_dev_register(&timed_output_vt);
-
-	if (ret)
+	if (ret < 0)
 		DbgOut((KERN_ERR
-		"tspdrv: timed_output_dev_register is fail\n"));
+		"tspdrv: timed_output_dev_register fail\n"));
+
+    ret = device_create_file(timed_output_vt.dev, &dev_attr_pwm_value);
+	if (ret < 0)
+		DbgOut((KERN_ERR
+		"tspdrv: device_create_file fail: pwm_value\n"));
+    
+    ret = device_create_file(timed_output_vt.dev, &dev_attr_pwm_max);
+	if (ret < 0) {
+		pr_err("vibrator_init(): create sysfs fail: pwm_max\n");
+	}
+    
+	ret = device_create_file(timed_output_vt.dev, &dev_attr_pwm_min);
+	if (ret < 0) {
+		pr_err("vibrator_init(): create sysfs fail: pwm_min\n");
+	}
+    
+	ret = device_create_file(timed_output_vt.dev, &dev_attr_pwm_default);
+	if (ret < 0) {
+		pr_err("vibrator_init(): create sysfs fail: pwm_default\n");
+	}
+    
+	ret = device_create_file(timed_output_vt.dev, &dev_attr_pwm_threshold);
+	if (ret < 0) {
+		pr_err("vibrator_init(): create sysfs fail: pwm_threshold\n");
+	}
 }
 
 /* File IO */
