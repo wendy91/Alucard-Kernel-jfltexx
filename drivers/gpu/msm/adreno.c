@@ -2099,7 +2099,7 @@ static void adreno_setup_ft_data(struct kgsl_device *device,
 	} else {
 		ft_data->start_of_replay_cmds = rb_rptr;
 		ft_data->ft_policy &= ~KGSL_FT_TEMP_DISABLE;
-}
+	}
 
 	if (context) {
 		adreno_context = context->devctxt;

@@ -795,7 +795,7 @@ int msm_mctl_init(struct msm_cam_v4l2_device *pcam)
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 	pmctl->client = msm_ion_client_create(-1, "camera");
-	if(pmctl->client == NULL) 
+	if(pmctl->client == NULL)
 		return -EINVAL;
 	kref_init(&pmctl->refcount);
 #endif

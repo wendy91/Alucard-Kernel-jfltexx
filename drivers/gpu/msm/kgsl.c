@@ -465,7 +465,7 @@ kgsl_create_context(struct kgsl_device_private *dev_priv)
 		if (ret != -EAGAIN)
 			break;
 	}
-	
+
 	if (ret)
 		goto func_end;
 
