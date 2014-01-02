@@ -41,6 +41,10 @@
  * Example user-space utilities: http://people.redhat.com/sgrubb/audit/
  */
 
+/**
+ * @knox SEAndroid
+ */
+
 #include <linux/init.h>
 #include <asm/types.h>
 #include <linux/atomic.h>
@@ -416,7 +420,7 @@ static void kauditd_send_skb(struct sk_buff *skb)
 #ifdef CONFIG_PROC_AVC
 		struct nlmsghdr *nlh = nlmsg_hdr(skb);
 		char *data = NLMSG_DATA(nlh);
-
+	
 		if (nlh->nlmsg_type != AUDIT_EOE) {
 			sec_avc_log("%s\n", data);
 		}

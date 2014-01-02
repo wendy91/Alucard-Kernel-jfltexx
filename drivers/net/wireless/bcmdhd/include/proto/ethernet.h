@@ -1,8 +1,8 @@
 /*
  * From FreeBSD 2.2.7: Fundamental constants relating to ethernet.
  *
- * Copyright (C) 1999-2013, Broadcom Corporation
- *
+ * Copyright (C) 1999-2012, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: ethernet.h 384540 2013-02-12 04:28:58Z $
+ * $Id: ethernet.h 354714 2012-09-03 03:12:21Z $
  */
 
 #ifndef _NET_ETHERNET_H_
@@ -65,21 +65,21 @@
 #define ETHER_TYPE_ARP		0x0806		
 #define ETHER_TYPE_8021Q	0x8100		
 #define	ETHER_TYPE_IPV6		0x86dd		
-#define	ETHER_TYPE_BRCM		0x886c
-#define	ETHER_TYPE_802_1X	0x888e
+#define	ETHER_TYPE_BRCM		0x886c		
+#define	ETHER_TYPE_802_1X	0x888e		
 #ifdef PLC
 #define	ETHER_TYPE_88E1		0x88e1
 #define	ETHER_TYPE_8912		0x8912
 #define ETHER_TYPE_GIGLED	0xffff
 #endif
-#define	ETHER_TYPE_802_1X_PREAUTH 0x88c7
-#define ETHER_TYPE_WAI		0x88b4
-#define ETHER_TYPE_89_0D	0x890d
+#define	ETHER_TYPE_802_1X_PREAUTH 0x88c7	
+#define ETHER_TYPE_WAI		0x88b4		
+#define ETHER_TYPE_89_0D	0x890d		
 
-#define ETHER_TYPE_PPP_SES	0x8864
+#define ETHER_TYPE_IPV6		0x86dd		
 
 
-#define	ETHER_BRCM_SUBTYPE_LEN	4
+#define	ETHER_BRCM_SUBTYPE_LEN	4	
 
 
 #define ETHER_DEST_OFFSET	(0 * ETHER_ADDR_LEN)	
@@ -127,9 +127,9 @@ BWL_PRE_PACKED_STRUCT struct	ether_addr {
 
 
 
-#define eacmp(a, b)	((((const uint16 *)(a))[0] ^ ((const uint16 *)(b))[0]) | \
-	                 (((const uint16 *)(a))[1] ^ ((const uint16 *)(b))[1]) | \
-	                 (((const uint16 *)(a))[2] ^ ((const uint16 *)(b))[2]))
+#define eacmp(a, b)	((((uint16 *)(a))[0] ^ ((uint16 *)(b))[0]) | \
+	                 (((uint16 *)(a))[1] ^ ((uint16 *)(b))[1]) | \
+	                 (((uint16 *)(a))[2] ^ ((uint16 *)(b))[2]))
 
 #define	ether_cmp(a, b)	eacmp(a, b)
 
@@ -144,31 +144,22 @@ do { \
 #define	ether_copy(s, d) eacopy(s, d)
 
 
-#define	ether_rcopy(s, d) \
-do { \
-	((uint16 *)(d))[2] = ((uint16 *)(s))[2]; \
-	((uint16 *)(d))[1] = ((uint16 *)(s))[1]; \
-	((uint16 *)(d))[0] = ((uint16 *)(s))[0]; \
-} while (0)
-
-
-
 static const struct ether_addr ether_bcast = {{255, 255, 255, 255, 255, 255}};
 static const struct ether_addr ether_null = {{0, 0, 0, 0, 0, 0}};
 static const struct ether_addr ether_ipv6_mcast = {{0x33, 0x33, 0x00, 0x00, 0x00, 0x01}};
 
-#define ETHER_ISBCAST(ea)	((((const uint8 *)(ea))[0] &		\
-	                          ((const uint8 *)(ea))[1] &		\
-				  ((const uint8 *)(ea))[2] &		\
-				  ((const uint8 *)(ea))[3] &		\
-				  ((const uint8 *)(ea))[4] &		\
-				  ((const uint8 *)(ea))[5]) == 0xff)
-#define ETHER_ISNULLADDR(ea)	((((const uint8 *)(ea))[0] |		\
-				  ((const uint8 *)(ea))[1] |		\
-				  ((const uint8 *)(ea))[2] |		\
-				  ((const uint8 *)(ea))[3] |		\
-				  ((const uint8 *)(ea))[4] |		\
-				  ((const uint8 *)(ea))[5]) == 0)
+#define ETHER_ISBCAST(ea)	((((uint8 *)(ea))[0] &		\
+	                          ((uint8 *)(ea))[1] &		\
+				  ((uint8 *)(ea))[2] &		\
+				  ((uint8 *)(ea))[3] &		\
+				  ((uint8 *)(ea))[4] &		\
+				  ((uint8 *)(ea))[5]) == 0xff)
+#define ETHER_ISNULLADDR(ea)	((((uint8 *)(ea))[0] |		\
+				  ((uint8 *)(ea))[1] |		\
+				  ((uint8 *)(ea))[2] |		\
+				  ((uint8 *)(ea))[3] |		\
+				  ((uint8 *)(ea))[4] |		\
+				  ((uint8 *)(ea))[5]) == 0)
 
 #define ETHER_ISNULLDEST(da)	((((const uint16 *)(da))[0] |           \
 				  ((const uint16 *)(da))[1] |           \
@@ -187,4 +178,4 @@ do { \
 
 #include <packed_section_end.h>
 
-#endif
+#endif 

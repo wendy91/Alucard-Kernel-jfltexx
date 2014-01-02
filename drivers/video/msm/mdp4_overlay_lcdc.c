@@ -343,7 +343,7 @@ void mdp4_lcdc_vsync_ctrl(struct fb_info *info, int enable)
 	pr_debug("%s: vsync enable=%d\n", __func__, enable);
 
 	vctrl->vsync_irq_enabled = enable;
-
+	
 	mdp4_lcdc_vsync_irq_ctrl(cndx, enable);
 
 
@@ -370,9 +370,9 @@ void mdp4_lcdc_wait4vsync(int cndx)
 
 	/* start timing generator & mmu if they are not started yet */
 	mdp4_overlay_lcdc_start();
-
+	
 	mdp4_lcdc_vsync_irq_ctrl(cndx, 1);
-
+	
 	spin_lock_irqsave(&vctrl->spin_lock, flags);
 
 	if (vctrl->wait_vsync_cnt == 0)
@@ -505,26 +505,6 @@ void mdp4_lcdc_vsync_init(int cndx)
 	atomic_set(&vctrl->suspend, 1);
 	atomic_set(&vctrl->vsync_resume, 1);
 	spin_lock_init(&vctrl->spin_lock);
-}
-void mdp4_lcdc_free_base_pipe(struct msm_fb_data_type *mfd)
-{
-	struct vsycn_ctrl *vctrl;
-	struct mdp4_overlay_pipe *pipe;
-
-	vctrl = &vsync_ctrl_db[0];
-	pipe = vctrl->base_pipe;
-
-	if (pipe == NULL)
-		return ;
-	/* adb stop */
-	if (pipe->pipe_type == OVERLAY_TYPE_BF)
-		mdp4_overlay_borderfill_stage_down(pipe);
-
-	/* base pipe may change after borderfill_stage_down */
-	pipe = vctrl->base_pipe;
-	mdp4_mixer_stage_down(pipe, 1);
-	mdp4_overlay_pipe_free(pipe, 1);
-	vctrl->base_pipe = NULL;
 }
 
 void mdp4_lcdc_base_swap(int cndx, struct mdp4_overlay_pipe *pipe)
@@ -819,7 +799,7 @@ int mdp4_lcdc_off(struct platform_device *pdev)
 			/* base pipe may change after borderfill_stage_down */
 			pipe = vctrl->base_pipe;
 			mdp4_mixer_stage_down(pipe, 1);
-			mdp4_overlay_pipe_free(pipe, 1);
+			mdp4_overlay_pipe_free(pipe);
 			vctrl->base_pipe = NULL;
 		} else {
 			/* system suspending */

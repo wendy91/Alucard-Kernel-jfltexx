@@ -40,10 +40,6 @@
 #include "msm_watchdog.h"
 #include "timer.h"
 
-#ifdef CONFIG_KEXEC_HARDBOOT
-#include <asm/kexec.h>
-#endif
-
 #define WDT0_RST	0x38
 #define WDT0_EN		0x40
 #define WDT0_BARK_TIME	0x4C
@@ -204,6 +200,30 @@ static void cpu_power_off(void *data)
 		;
 }
 
+static int irq_enabled;
+static int status;
+
+int resout_irq_control(int enable)
+{
+	if (!irq_enabled)
+		return -1;
+
+	if (enable ^ status) {
+		if (enable) {
+			enable_irq(pmic_reset_irq);
+			status = 1;
+			pr_info("%s : %d\n", __func__, status);
+		} else {
+			disable_irq_nosync(pmic_reset_irq);
+			status = 0;
+			pr_info("%s : %d\n", __func__, status);
+		}
+	} else
+		return -1;
+
+	return 0;
+}
+
 static irqreturn_t resout_irq_handler(int irq, void *dev_id)
 {
 	pr_warn("%s PMIC Initiated shutdown\n", __func__);
@@ -319,8 +339,6 @@ void msm_restart(char mode, const char *cmd)
 #ifdef CONFIG_SEC_DEBUG
 		} else if (!strncmp(cmd, "sec_debug_hw_reset", 18)) {
 			__raw_writel(0x776655ee, restart_reason);
-		} else if (!strncmp(cmd, "sec_debug_low_panic", 19)) {
-			__raw_writel(0x776655dd, restart_reason);
 #endif
 		} else if (!strncmp(cmd, "download", 8)) {
 			__raw_writel(0x12345671, restart_reason);
@@ -335,9 +353,6 @@ void msm_restart(char mode, const char *cmd)
 				&& !kstrtoul(cmd + 7, 0, &value)) {
 			__raw_writel(0xfedc0000 | value, restart_reason);
 #endif
-		} else if (strlen(cmd) == 0) {
-			printk(KERN_NOTICE "%s : value of cmd is NULL.\n", __func__);
-			__raw_writel(0x12345678, restart_reason);
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
@@ -353,7 +368,6 @@ reset:
 		__raw_writel(0x12345678, restart_reason);
 	}
 #endif
-	printk(KERN_NOTICE " msm_restart restart_reason : 0x%08x\n", readl(restart_reason));
 	__raw_writel(0, msm_tmr0_base + WDT0_EN);
 	if (!(machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())) {
 		mb();
@@ -383,23 +397,6 @@ static struct notifier_block dload_reboot_block = {
 };
 #endif
 
-#ifdef CONFIG_KEXEC_HARDBOOT
-void msm_kexec_hardboot(void)
-{
-#if defined(CONFIG_MSM_DLOAD_MODE) && !defined(CONFIG_SEC_DEBUG)
-	/* Do not enter download mode on reboot. */
-	set_dload_mode(0);
-#endif
-
-	/* Set PM8XXX PMIC to reset on power off. */
-	pm8xxx_reset_pwr_off(1);
-
-	/* Reboot with the recovery kernel since the boot kernel decompressor may
-	 * not support the hardboot jump. */
-	__raw_writel(0x77665502, restart_reason);
-}
-#endif
-
 static int __init msm_pmic_restart_init(void)
 {
 	int rc;
@@ -417,6 +414,8 @@ static int __init msm_pmic_restart_init(void)
 					"restart_from_pmic", NULL);
 		if (rc < 0)
 			pr_err("pmic restart irq fail rc = %d\n", rc);
+		irq_enabled = 1;
+		status = 1;
 	} else {
 		pr_warn("no pmic restart interrupt specified\n");
 	}
@@ -454,9 +453,6 @@ static int __init msm_restart_init(void)
 	restart_reason = MSM_IMEM_BASE + RESTART_REASON_ADDR;
 #endif
 	pm_power_off = msm_power_off;
-#ifdef CONFIG_KEXEC_HARDBOOT
-	kexec_hardboot_hook = msm_kexec_hardboot;
-#endif
 
 	return 0;
 }

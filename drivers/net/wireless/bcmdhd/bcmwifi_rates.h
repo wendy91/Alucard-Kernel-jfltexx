@@ -1,8 +1,8 @@
 /*
  * Indices for 802.11 a/b/g/n/ac 1-3 chain symmetric transmit rates
  *
- * Copyright (C) 1999-2013, Broadcom Corporation
- *
+ * Copyright (C) 1999-2012, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
@@ -48,7 +48,8 @@ typedef enum wl_tx_bw {
 	WL_TX_BW_80,
 	WL_TX_BW_20IN40,
 	WL_TX_BW_20IN80,
-	WL_TX_BW_40IN80
+	WL_TX_BW_40IN80,
+	WL_TX_BW_ALL
 } wl_tx_bw_t;
 
 
@@ -195,9 +196,9 @@ typedef enum clm_rates {
 	WL_RATE_2X2_VHT8SS2        = 62,
 	WL_RATE_2X2_VHT9SS2        = 63,
 
+	
 
-
-
+	
 	WL_RATE_1X3_DSSS_1         = 64,
 	WL_RATE_1X3_DSSS_2         = 65,
 	WL_RATE_1X3_DSSS_5_5       = 66,
@@ -349,7 +350,7 @@ typedef enum clm_rates {
 	WL_RATE_2X2_TXBF_VHT7SS2   = 141,
 
 
-
+	
 
 
 
@@ -430,6 +431,6 @@ typedef enum clm_rates {
 
 #ifdef __cplusplus
 }
-#endif
+#endif 
 
 #endif 

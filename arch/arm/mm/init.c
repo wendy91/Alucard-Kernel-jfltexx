@@ -104,9 +104,6 @@ void show_mem(unsigned int filter)
 	printk("Mem-info:\n");
 	show_free_areas(filter);
 
-	if (filter & SHOW_MEM_FILTER_PAGE_COUNT)
-		return;
-
 	for_each_bank (i, mi) {
 		struct membank *bank = &mi->bank[i];
 		unsigned int pfn1, pfn2;
@@ -677,46 +674,6 @@ static void __init free_highpages(void)
 #endif
 }
 
-#define MLK(b, t) b, t, ((t) - (b)) >> 10
-#define MLM(b, t) b, t, ((t) - (b)) >> 20
-#define MLK_ROUNDUP(b, t) b, t, DIV_ROUND_UP(((t) - (b)), SZ_1K)
-
-#ifdef CONFIG_ENABLE_VMALLOC_SAVING
-static void print_vmalloc_lowmem_info(void)
-{
-	int i;
-	void *va_start, *va_end;
-
-	printk(KERN_NOTICE
-		"	   vmalloc : 0x%08lx - 0x%08lx   (%4ld MB)\n",
-		MLM(VMALLOC_START, VMALLOC_END));
-
-	for (i = meminfo.nr_banks - 1; i >= 0; i--) {
-		if (!meminfo.bank[i].highmem) {
-			va_start = __va(meminfo.bank[i].start);
-			va_end = __va(meminfo.bank[i].start +
-						meminfo.bank[i].size);
-			printk(KERN_NOTICE
-			 "	    lowmem : 0x%08lx - 0x%08lx   (%4ld MB)\n",
-			MLM((unsigned long)va_start, (unsigned long)va_end));
-		}
-		if (i && ((meminfo.bank[i-1].start + meminfo.bank[i-1].size) !=
-			   meminfo.bank[i].start)) {
-			if (meminfo.bank[i-1].start + meminfo.bank[i-1].size
-				   <= MAX_HOLE_ADDRESS) {
-				va_start = __va(meminfo.bank[i-1].start
-						+ meminfo.bank[i-1].size);
-				va_end = __va(meminfo.bank[i].start);
-				printk(KERN_NOTICE
-				"	   vmalloc : 0x%08lx - 0x%08lx   (%4ld MB)\n",
-					   MLM((unsigned long)va_start,
-						   (unsigned long)va_end));
-			}
-		}
-	}
-}
-#endif
-
 /*
  * mem_init() marks the free areas in the mem_map and tells us how much
  * memory is free.  This is done after various parts of the system have
@@ -731,6 +688,9 @@ void __init mem_init(void)
 	/* These pointers are filled in on TCM detection */
 	extern u32 dtcm_end;
 	extern u32 itcm_end;
+#endif
+#ifdef CONFIG_FIX_MOVABLE_ZONE
+	struct zone *zone;
 #endif
 
 	max_mapnr   = pfn_to_page(max_pfn + PHYS_PFN_OFFSET) - mem_map;
@@ -777,6 +737,14 @@ void __init mem_init(void)
 #endif
 	}
 
+#ifdef CONFIG_FIX_MOVABLE_ZONE
+	for_each_zone(zone) {
+		if (zone_idx(zone) == ZONE_MOVABLE)
+			total_unmovable_pages = totalram_pages -
+							zone->spanned_pages;
+	}
+#endif
+
 	/*
 	 * Since our memory may not be contiguous, calculate the
 	 * real number of pages we have in this system
@@ -797,60 +765,55 @@ void __init mem_init(void)
 		reserved_pages << (PAGE_SHIFT-10),
 		totalhigh_pages << (PAGE_SHIFT-10));
 
+#define MLK(b, t) b, t, ((t) - (b)) >> 10
+#define MLM(b, t) b, t, ((t) - (b)) >> 20
+#define MLK_ROUNDUP(b, t) b, t, DIV_ROUND_UP(((t) - (b)), SZ_1K)
+
 	printk(KERN_NOTICE "Virtual kernel memory layout:\n"
 			"    vector  : 0x%08lx - 0x%08lx   (%4ld kB)\n"
-#ifdef CONFIG_ARM_USE_USER_ACCESSIBLE_TIMERS
-			"    timers  : 0x%08lx - 0x%08lx   (%4ld kB)\n"
-#endif
 #ifdef CONFIG_HAVE_TCM
 			"    DTCM    : 0x%08lx - 0x%08lx   (%4ld kB)\n"
 			"    ITCM    : 0x%08lx - 0x%08lx   (%4ld kB)\n"
 #endif
-			"    fixmap  : 0x%08lx - 0x%08lx   (%4ld kB)\n",
+			"    fixmap  : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+			"    vmalloc : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+			"    lowmem  : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+#ifdef CONFIG_HIGHMEM
+			"    pkmap   : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+#endif
+#ifdef CONFIG_MODULES
+			"    modules : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+#endif
+			"      .text : 0x%p" " - 0x%p" "   (%4d kB)\n"
+			"      .init : 0x%p" " - 0x%p" "   (%4d kB)\n"
+			"      .data : 0x%p" " - 0x%p" "   (%4d kB)\n"
+			"       .bss : 0x%p" " - 0x%p" "   (%4d kB)\n",
+
 			MLK(UL(CONFIG_VECTORS_BASE), UL(CONFIG_VECTORS_BASE) +
 				(PAGE_SIZE)),
-#ifdef CONFIG_ARM_USE_USER_ACCESSIBLE_TIMERS
-			MLK(UL(CONFIG_ARM_USER_ACCESSIBLE_TIMER_BASE),
-				UL(CONFIG_ARM_USER_ACCESSIBLE_TIMER_BASE)
-					+ (PAGE_SIZE)),
-#endif
 #ifdef CONFIG_HAVE_TCM
 			MLK(DTCM_OFFSET, (unsigned long) dtcm_end),
 			MLK(ITCM_OFFSET, (unsigned long) itcm_end),
 #endif
-			MLK(FIXADDR_START, FIXADDR_TOP));
-#ifdef CONFIG_ENABLE_VMALLOC_SAVING
-	print_vmalloc_lowmem_info();
-#else
-	printk(KERN_NOTICE
-		   "    vmalloc : 0x%08lx - 0x%08lx   (%4ld MB)\n"
-		   "    lowmem  : 0x%08lx - 0x%08lx   (%4ld MB)\n",
-		   MLM(VMALLOC_START, VMALLOC_END),
-		   MLM(PAGE_OFFSET, (unsigned long)high_memory));
-#endif
-	printk(KERN_NOTICE
+			MLK(FIXADDR_START, FIXADDR_TOP),
+			MLM(VMALLOC_START, VMALLOC_END),
+			MLM(PAGE_OFFSET, (unsigned long)high_memory),
 #ifdef CONFIG_HIGHMEM
-		   "    pkmap   : 0x%08lx - 0x%08lx   (%4ld MB)\n"
-#endif
-#ifdef CONFIG_MODULES
-		   "    modules : 0x%08lx - 0x%08lx   (%4ld MB)\n"
-#endif
-		   "      .text : 0x%p" " - 0x%p" "   (%4d kB)\n"
-		   "      .init : 0x%p" " - 0x%p" "   (%4d kB)\n"
-		   "      .data : 0x%p" " - 0x%p" "   (%4d kB)\n"
-		   "       .bss : 0x%p" " - 0x%p" "   (%4d kB)\n",
-#ifdef CONFIG_HIGHMEM
-		   MLM(PKMAP_BASE, (PKMAP_BASE) + (LAST_PKMAP) *
+			MLM(PKMAP_BASE, (PKMAP_BASE) + (LAST_PKMAP) *
 				(PAGE_SIZE)),
 #endif
 #ifdef CONFIG_MODULES
-		   MLM(MODULES_VADDR, MODULES_END),
+			MLM(MODULES_VADDR, MODULES_END),
 #endif
 
-		   MLK_ROUNDUP(_text, _etext),
-		   MLK_ROUNDUP(__init_begin, __init_end),
-		   MLK_ROUNDUP(_sdata, _edata),
-		   MLK_ROUNDUP(__bss_start, __bss_stop));
+			MLK_ROUNDUP(_text, _etext),
+			MLK_ROUNDUP(__init_begin, __init_end),
+			MLK_ROUNDUP(_sdata, _edata),
+			MLK_ROUNDUP(__bss_start, __bss_stop));
+
+#undef MLK
+#undef MLM
+#undef MLK_ROUNDUP
 
 	/*
 	 * Check boundaries twice: Some fundamental inconsistencies can
@@ -858,7 +821,7 @@ void __init mem_init(void)
 	 */
 #ifdef CONFIG_MMU
 	BUILD_BUG_ON(TASK_SIZE				> MODULES_VADDR);
-	BUG_ON(TASK_SIZE				> MODULES_VADDR);
+	BUG_ON(TASK_SIZE 				> MODULES_VADDR);
 #endif
 
 #ifdef CONFIG_HIGHMEM
@@ -877,9 +840,6 @@ void __init mem_init(void)
 	}
 }
 
-#undef MLK
-#undef MLM
-#undef MLK_ROUNDUP
 void free_initmem(void)
 {
 	unsigned long reclaimed_initmem;
@@ -898,8 +858,38 @@ void free_initmem(void)
 					    __phys_to_pfn(__pa(__init_end)),
 					    "init");
 		totalram_pages += reclaimed_initmem;
+#ifdef CONFIG_FIX_MOVABLE_ZONE
+		total_unmovable_pages += reclaimed_initmem;
+#endif
 	}
 }
+
+#ifdef CONFIG_MEMORY_HOTPLUG
+int arch_add_memory(int nid, u64 start, u64 size)
+{
+	struct pglist_data *pgdata = NODE_DATA(nid);
+	struct zone *zone = pgdata->node_zones + ZONE_MOVABLE;
+	unsigned long start_pfn = start >> PAGE_SHIFT;
+	unsigned long nr_pages = size >> PAGE_SHIFT;
+
+	return __add_pages(nid, zone, start_pfn, nr_pages);
+}
+
+int arch_physical_active_memory(u64 start, u64 size)
+{
+	return platform_physical_active_pages(start, size);
+}
+
+int arch_physical_remove_memory(u64 start, u64 size)
+{
+	return platform_physical_remove_pages(start, size);
+}
+
+int arch_physical_low_power_memory(u64 start, u64 size)
+{
+	return platform_physical_low_power_pages(start, size);
+}
+#endif
 
 #ifdef CONFIG_BLK_DEV_INITRD
 
@@ -915,6 +905,9 @@ void free_initrd_mem(unsigned long start, unsigned long end)
 						 __phys_to_pfn(__pa(end)),
 						 "initrd");
 		totalram_pages += reclaimed_initrd_mem;
+#ifdef CONFIG_FIX_MOVABLE_ZONE
+		total_unmovable_pages += reclaimed_initrd_mem;
+#endif
 	}
 }
 

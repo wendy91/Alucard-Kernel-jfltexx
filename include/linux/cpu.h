@@ -75,9 +75,8 @@ enum {
 	/* migration should happen before other stuff but after perf */
 	CPU_PRI_PERF		= 20,
 	CPU_PRI_MIGRATION	= 10,
-	/* bring up workqueues before normal notifiers and down after */
-	CPU_PRI_WORKQUEUE_UP	= 5,
-	CPU_PRI_WORKQUEUE_DOWN	= -5,
+	/* prepare workqueues for other notifiers */
+	CPU_PRI_WORKQUEUE	= 5,
 };
 
 #define CPU_ONLINE		0x0002 /* CPU (unsigned)v is up */
@@ -146,7 +145,6 @@ static inline void unregister_cpu_notifier(struct notifier_block *nb)
 int cpu_up(unsigned int cpu);
 void notify_cpu_starting(unsigned int cpu);
 extern void cpu_maps_update_begin(void);
-int cpu_maps_is_updating(void);
 extern void cpu_maps_update_done(void);
 
 #else	/* CONFIG_SMP */
@@ -164,11 +162,6 @@ static inline void unregister_cpu_notifier(struct notifier_block *nb)
 
 static inline void cpu_maps_update_begin(void)
 {
-}
-
-static inline int cpu_maps_is_updating(void)
-{
-	return 0;
 }
 
 static inline void cpu_maps_update_done(void)

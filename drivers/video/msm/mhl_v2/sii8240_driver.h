@@ -28,7 +28,6 @@
 #include "sii8240_rcp.h"
 #include <linux/timer.h>
 #include <linux/switch.h>
-#include <video/msm_hdmi_modes.h>
 #undef MHL_2X_3D
 /* for factory test process */
 #define CONFIG_SS_FACTORY
@@ -211,8 +210,8 @@
  * while sending SET_INT, use these Offset[0x21...0x23]. */
 
 /* 0xC8: CBUS Device Capability Registers */
-#define MHL_VER_MAJOR			(CONFIG_MHL_VERSION >> 4)/* Most Significant 4-bits */
-#define MHL_VER_MINOR			(CONFIG_MHL_VERSION & 0x0F) /* Least significant 4-bits */
+#define MHL_VER_MAJOR			(1<<1) /* Most Significant 4-bits */
+#define MHL_VER_MINOR			(0<<0) /* Least significant 4-bits */
 
 #define DEV_TYPE_SOURCE			0x02
 #define DEV_TYPE_SINK			0x01
@@ -951,8 +950,8 @@ struct mhl_3D_data {
 };
 
 struct mhl_timing {
-	u8 avi_infoframe[HDMI_VFRMT_MAX];
-	u8 d_format[HDMI_VFRMT_MAX];
+	u8 avi_infoframe[60];
+	u8 d_format[60];
 };
 struct sii8240_data;
 struct sii8240_data {

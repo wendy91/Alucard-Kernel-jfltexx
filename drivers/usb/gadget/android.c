@@ -521,9 +521,6 @@ static struct android_usb_function rmnet_smd_sdio_function = {
 #define MAX_XPORT_STR_LEN 50
 static char rmnet_transports[MAX_XPORT_STR_LEN];
 
-/*rmnet transport name string - "rmnet_hsic[,rmnet_hsusb]" */
-static char rmnet_xport_names[MAX_XPORT_STR_LEN];
-
 static void rmnet_function_cleanup(struct android_usb_function *f)
 {
 	frmnet_cleanup();
@@ -536,28 +533,18 @@ static int rmnet_function_bind_config(struct android_usb_function *f,
 	int err = 0;
 	char *ctrl_name;
 	char *data_name;
-	char *tname = NULL;
 	char buf[MAX_XPORT_STR_LEN], *b;
-	char xport_name_buf[MAX_XPORT_STR_LEN], *tb;
 	static int rmnet_initialized, ports;
 
 	if (!rmnet_initialized) {
 		rmnet_initialized = 1;
 		strlcpy(buf, rmnet_transports, sizeof(buf));
 		b = strim(buf);
-
-		strlcpy(xport_name_buf, rmnet_xport_names,
-				sizeof(xport_name_buf));
-		tb = strim(xport_name_buf);
-
 		while (b) {
 			ctrl_name = strsep(&b, ",");
 			data_name = strsep(&b, ",");
 			if (ctrl_name && data_name) {
-				if (tb)
-					tname = strsep(&tb, ",");
-				err = frmnet_init_port(ctrl_name, data_name,
-						tname);
+				err = frmnet_init_port(ctrl_name, data_name);
 				if (err) {
 					pr_err("rmnet: Cannot open ctrl port:"
 						"'%s' data port:'%s'\n",
@@ -601,34 +588,12 @@ static ssize_t rmnet_transports_store(
 	return size;
 }
 
-static ssize_t rmnet_xport_names_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%s\n", rmnet_xport_names);
-}
-
-static ssize_t rmnet_xport_names_store(
-		struct device *device, struct device_attribute *attr,
-		const char *buff, size_t size)
-{
-	strlcpy(rmnet_xport_names, buff, sizeof(rmnet_xport_names));
-
-	return size;
-}
-
 static struct device_attribute dev_attr_rmnet_transports =
 					__ATTR(transports, S_IRUGO | S_IWUSR,
 						rmnet_transports_show,
 						rmnet_transports_store);
-
-static struct device_attribute dev_attr_rmnet_xport_names =
-				__ATTR(transport_names, S_IRUGO | S_IWUSR,
-				rmnet_xport_names_show,
-				rmnet_xport_names_store);
-
 static struct device_attribute *rmnet_function_attributes[] = {
 					&dev_attr_rmnet_transports,
-					&dev_attr_rmnet_xport_names,
 					NULL };
 
 static struct android_usb_function rmnet_function = {
@@ -861,33 +826,9 @@ static ssize_t serial_transports_store(
 	return size;
 }
 
-/*enabled FSERIAL transport names - "serial_hsic[,serial_hsusb]"*/
-static char serial_xport_names[32];
-static ssize_t serial_xport_names_store(
-		struct device *device, struct device_attribute *attr,
-		const char *buff, size_t size)
-{
-	strlcpy(serial_xport_names, buff, sizeof(serial_xport_names));
-
-	return size;
-}
-
-static ssize_t serial_xport_names_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%s\n", serial_xport_names);
-}
-
 static DEVICE_ATTR(transports, S_IWUSR, NULL, serial_transports_store);
-static struct device_attribute dev_attr_serial_xport_names =
-				__ATTR(transport_names, S_IRUGO | S_IWUSR,
-				serial_xport_names_show,
-				serial_xport_names_store);
-
-static struct device_attribute *serial_function_attributes[] = {
-					&dev_attr_transports,
-					&dev_attr_serial_xport_names,
-					NULL };
+static struct device_attribute *serial_function_attributes[] =
+					 { &dev_attr_transports, NULL };
 
 static void serial_function_cleanup(struct android_usb_function *f)
 {
@@ -897,8 +838,8 @@ static void serial_function_cleanup(struct android_usb_function *f)
 static int serial_function_bind_config(struct android_usb_function *f,
 					struct usb_configuration *c)
 {
-	char *name, *xport_name = NULL;
-	char buf[32], *b, xport_name_buf[32], *tb;
+	char *name;
+	char buf[32], *b;
 	int err = -1, i;
 	static int serial_initialized = 0, ports = 0;
 
@@ -909,16 +850,11 @@ static int serial_function_bind_config(struct android_usb_function *f,
 	strlcpy(buf, serial_transports, sizeof(buf));
 	b = strim(buf);
 
-	strlcpy(xport_name_buf, serial_xport_names, sizeof(xport_name_buf));
-	tb = strim(xport_name_buf);
-
 	while (b) {
 		name = strsep(&b, ",");
 
 		if (name) {
-			if (tb)
-				xport_name = strsep(&tb, ",");
-			err = gserial_init_port(ports, name, xport_name);
+			err = gserial_init_port(ports, name);
 			if (err) {
 				pr_err("serial: Cannot open port '%s'", name);
 				goto out;
@@ -964,24 +900,8 @@ static ssize_t acm_transports_store(
 }
 
 static DEVICE_ATTR(acm_transports, S_IWUSR, NULL, acm_transports_store);
-
-/*enabled ACM transport names - "serial_hsic[,serial_hsusb]"*/
-static char acm_xport_names[32];
-static ssize_t acm_xport_names_store(
-		struct device *device, struct device_attribute *attr,
-		const char *buff, size_t size)
-{
-	strlcpy(acm_xport_names, buff, sizeof(acm_xport_names));
-
-	return size;
-}
-
-static DEVICE_ATTR(acm_transport_names, S_IWUSR, NULL, acm_xport_names_store);
-
 static struct device_attribute *acm_function_attributes[] = {
-		&dev_attr_acm_transports,
-		&dev_attr_acm_transport_names,
-		NULL };
+		&dev_attr_acm_transports, NULL };
 
 static void acm_function_cleanup(struct android_usb_function *f)
 {
@@ -991,8 +911,8 @@ static void acm_function_cleanup(struct android_usb_function *f)
 static int acm_function_bind_config(struct android_usb_function *f,
 					struct usb_configuration *c)
 {
-	char *name, *xport_name = NULL;
-	char buf[32], *b, xport_name_buf[32], *tb;
+	char *name;
+	char buf[32], *b;
 	int err = -1, i;
 	static int acm_initialized, ports;
 
@@ -1003,16 +923,11 @@ static int acm_function_bind_config(struct android_usb_function *f,
 	strlcpy(buf, acm_transports, sizeof(buf));
 	b = strim(buf);
 
-	strlcpy(xport_name_buf, acm_xport_names, sizeof(xport_name_buf));
-	tb = strim(xport_name_buf);
-
 	while (b) {
 		name = strsep(&b, ",");
 
 		if (name) {
-			if (tb)
-				xport_name = strsep(&tb, ",");
-			err = acm_init_port(ports, name, xport_name);
+			err = acm_init_port(ports, name);
 			if (err) {
 				pr_err("acm: Cannot open port '%s'", name);
 				goto out;
@@ -1124,6 +1039,7 @@ static struct android_usb_function ptp_function = {
 	.init		= ptp_function_init,
 	.cleanup	= ptp_function_cleanup,
 	.bind_config	= ptp_function_bind_config,
+	.ctrlrequest	= mtp_function_ctrlrequest,
 };
 
 #ifdef CONFIG_USB_ANDROID_CDC_ECM
@@ -2263,7 +2179,6 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 	struct android_usb_function *f;
 	struct android_configuration *conf;
 	int enabled = 0;
-	static DEFINE_RATELIMIT_STATE(rl, 10*HZ, 1);
 
 	if (!cdev)
 		return -ENODEV;
@@ -2341,7 +2256,7 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 	} else if (!enabled) {
 		usb_gadget_disconnect(cdev->gadget);
 		dev->enabled = false;
-	} else if (__ratelimit(&rl)) {
+	} else {
 		pr_err("android_usb: already %s\n",
 				dev->enabled ? "enabled" : "disabled");
 	}

@@ -733,7 +733,6 @@ extern struct mdp_hist_mgmt *mdp_hist_mgmt_array[];
 
 void mdp_hw_init(void);
 int mdp_ppp_pipe_wait(void);
-void mdp_pipe_kickoff_simplified(uint32 term);
 void mdp_pipe_kickoff(uint32 term, struct msm_fb_data_type *mfd);
 void mdp_clk_ctrl(int on);
 void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
@@ -778,6 +777,8 @@ int mdp_lcdc_on(struct platform_device *pdev);
 int mdp_lcdc_off(struct platform_device *pdev);
 void mdp_lcdc_update(struct msm_fb_data_type *mfd);
 void mdp4_overlay_dsi_video_start(void);
+
+
 #ifdef CONFIG_FB_MSM_MDP303
 int mdp_dsi_video_on(struct platform_device *pdev);
 int mdp_dsi_video_off(struct platform_device *pdev);
@@ -845,11 +846,12 @@ static inline int mdp_bus_scale_update_request(u64 ab_p0,
         return 0;
  }
 
+ 
+static int mdp_bus_scale_restore_request(void) 
+{ 
+ return 0; 
+} 
 
-static int mdp_bus_scale_restore_request(void)
-{
- return 0;
-}
 #endif
 void mdp_dma_vsync_ctrl(int enable);
 void mdp_dma_video_vsync_ctrl(int enable);
@@ -884,7 +886,7 @@ void mdp_histogram_handle_isr(struct mdp_hist_mgmt *mgmt);
 void __mdp_histogram_kickoff(struct mdp_hist_mgmt *mgmt);
 void __mdp_histogram_reset(struct mdp_hist_mgmt *mgmt);
 void mdp_footswitch_ctrl(boolean on);
-int mdp_enable_iommu_clocks(void);
+int mdp_enable_iommu_clocks(void); 
 int mdp_disable_iommu_clocks(void);
 
 #ifdef CONFIG_FB_MSM_MDP303

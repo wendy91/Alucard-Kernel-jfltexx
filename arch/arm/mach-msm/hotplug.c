@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 2002 ARM Ltd.
  *  All Rights Reserved
- *  Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ *  Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -11,7 +11,6 @@
 #include <linux/errno.h>
 #include <linux/smp.h>
 #include <linux/cpu.h>
-#include <linux/ratelimit.h>
 
 #include <asm/cacheflush.h>
 #include <asm/smp_plat.h>
@@ -29,9 +28,6 @@ struct msm_hotplug_device {
 	struct completion cpu_killed;
 	unsigned int warm_boot;
 };
-
-
-static cpumask_t cpu_dying_mask;
 
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct msm_hotplug_device,
 			msm_hotplug_devices);
@@ -74,12 +70,13 @@ static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 
 int platform_cpu_kill(unsigned int cpu)
 {
-	int ret = 0;
+	int ret;
 
-	if (cpumask_test_and_clear_cpu(cpu, &cpu_dying_mask))
-		ret = msm_pm_wait_cpu_shutdown(cpu);
+	ret = msm_pm_wait_cpu_shutdown(cpu);
+	if (ret)
+		return 0;
 
-	return ret ? 0 : 1;
+	return 1;
 }
 
 /*
@@ -146,7 +143,6 @@ static int hotplug_rtb_callback(struct notifier_block *nfb,
 		uncached_logk(LOGK_HOTPLUG, (void *)(cpudata | this_cpumask));
 		break;
 	case CPU_DYING:
-		cpumask_set_cpu((unsigned long)hcpu, &cpu_dying_mask);
 		uncached_logk(LOGK_HOTPLUG, (void *)(cpudata & ~this_cpumask));
 		break;
 	default:
@@ -157,29 +153,6 @@ static int hotplug_rtb_callback(struct notifier_block *nfb,
 }
 static struct notifier_block hotplug_rtb_notifier = {
 	.notifier_call = hotplug_rtb_callback,
-};
-
-static int hotplug_cpu_check_callback(struct notifier_block *nfb,
-				      unsigned long action, void *hcpu)
-{
-	int cpu = (int)hcpu;
-
-	switch (action & (~CPU_TASKS_FROZEN)) {
-	case CPU_DOWN_PREPARE:
-		if (cpu == 0) {
-			pr_err_ratelimited("CPU0 hotplug is not supported\n");
-			return NOTIFY_BAD;
-		}
-		break;
-	default:
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-static struct notifier_block hotplug_cpu_check_notifier = {
-	.notifier_call = hotplug_cpu_check_callback,
-	.priority = INT_MAX,
 };
 
 int msm_platform_secondary_init(unsigned int cpu)
@@ -203,15 +176,9 @@ int msm_platform_secondary_init(unsigned int cpu)
 
 static int __init init_hotplug(void)
 {
-	int rc;
+
 	struct msm_hotplug_device *dev = &__get_cpu_var(msm_hotplug_devices);
-
 	init_completion(&dev->cpu_killed);
-
-	rc = register_hotcpu_notifier(&hotplug_rtb_notifier);
-	if (rc)
-		return rc;
-
-	return register_hotcpu_notifier(&hotplug_cpu_check_notifier);
+	return register_hotcpu_notifier(&hotplug_rtb_notifier);
 }
 early_initcall(init_hotplug);

@@ -883,19 +883,7 @@ static void handle_channel(struct wiphy *wiphy,
 	chan->max_antenna_gain = min(chan->orig_mag,
 		(int) MBI_TO_DBI(power_rule->max_antenna_gain));
 	chan->max_reg_power = (int) MBM_TO_DBM(power_rule->max_eirp);
-	if (chan->orig_mpwr) {
-		/*
-		 * Devices that use NL80211_COUNTRY_IE_FOLLOW_POWER will always
-		 * follow the passed country IE power settings.
-		 */
-		if (initiator == NL80211_REGDOM_SET_BY_COUNTRY_IE &&
-		    wiphy->country_ie_pref & NL80211_COUNTRY_IE_FOLLOW_POWER)
-			chan->max_power = chan->max_reg_power;
-		else
-			chan->max_power = min(chan->orig_mpwr,
-					      chan->max_reg_power);
-	} else
-		chan->max_power = chan->max_reg_power;
+	chan->max_power = min(chan->max_power, chan->max_reg_power);
 }
 
 static void handle_band(struct wiphy *wiphy,
@@ -1307,8 +1295,6 @@ static int ignore_request(struct wiphy *wiphy,
 	case NL80211_REGDOM_SET_BY_CORE:
 		return 0;
 	case NL80211_REGDOM_SET_BY_COUNTRY_IE:
-		if (wiphy->country_ie_pref & NL80211_COUNTRY_IE_IGNORE_CORE)
-			return -EALREADY;
 
 		last_wiphy = wiphy_idx_to_wiphy(last_request->wiphy_idx);
 
@@ -2201,15 +2187,10 @@ static int __set_regdom(const struct ieee80211_regdomain *rd)
 		 * However if a driver requested this specific regulatory
 		 * domain we keep it for its private use
 		 */
-		if (last_request->initiator == NL80211_REGDOM_SET_BY_DRIVER) {
-			const struct ieee80211_regdomain *tmp;
-
-			tmp = request_wiphy->regd;
+		if (last_request->initiator == NL80211_REGDOM_SET_BY_DRIVER)
 			request_wiphy->regd = rd;
-			kfree(tmp);
-		} else {
+		else
 			kfree(rd);
-		}
 
 		rd = NULL;
 

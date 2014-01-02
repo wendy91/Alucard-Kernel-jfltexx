@@ -40,7 +40,6 @@ struct adm_ctl {
 	atomic_t copp_stat[AFE_MAX_PORTS];
 	wait_queue_head_t wait;
 	int  ec_ref_rx;
-	int  prev_index;
 };
 
 static struct acdb_cal_block mem_addr_audproc[MAX_AUDPROC_TYPES];
@@ -64,12 +63,12 @@ static void q6adm_add_hdr_async(struct apr_hdr *hdr,
 	hdr->dest_domain = APR_DOMAIN_ADSP;
 	index = afe_get_port_index(port_id);
 	hdr->src_port = port_id;
-	hdr->dest_port =atomic_read(&this_adm.copp_id[index]);
+	hdr->dest_port =atomic_read(&this_adm.copp_id[index]);	
 	hdr->token = port_id;
 	hdr->pkt_size  = pkt_size;
 	return;
 }
-#endif
+#endif 
 
 int srs_trumedia_open(int port_id, int srs_tech_id, void *srs_params)
 {
@@ -418,7 +417,7 @@ static int send_adm_cal_block(int port_id, struct acdb_cal_block *aud_cal)
 			__func__, port_id, aud_cal->cal_paddr);
 		result = -EINVAL;
 		goto done;
-	}
+	} 
 	/* Wait for the callback */
 	result = wait_event_timeout(this_adm.wait,
 		atomic_read(&this_adm.copp_stat[index]),
@@ -440,8 +439,6 @@ static void send_adm_cal(int port_id, int path)
 	int			result = 0;
 	s32			acdb_path;
 	struct acdb_cal_block	aud_cal;
-	int flag = 0;
-	int index = afe_get_port_index(port_id);
 
 	pr_debug("%s\n", __func__);
 
@@ -470,16 +467,13 @@ static void send_adm_cal(int port_id, int path)
 		else
 			mem_addr_audproc[acdb_path] = aud_cal;
 	}
-	if (this_adm.prev_index != index) {
-		if (!send_adm_cal_block(port_id, &aud_cal))
-			pr_debug("%s: Audproc cal sent for port id: %d, path %d\n",
-				__func__, port_id, acdb_path);
-		else
-			pr_debug("%s: Audproc cal not sent for port id: %d, path %d\n",
-				__func__, port_id, acdb_path);
-		this_adm.prev_index = index;
-		flag = 1;
-	}
+
+	if (!send_adm_cal_block(port_id, &aud_cal))
+		pr_debug("%s: Audproc cal sent for port id: %d, path %d\n",
+			__func__, port_id, acdb_path);
+	else
+		pr_debug("%s: Audproc cal not sent for port id: %d, path %d\n",
+			__func__, port_id, acdb_path);
 
 	pr_debug("%s: Sending audvol cal\n", __func__);
 	get_audvol_cal(acdb_path, &aud_cal);
@@ -502,15 +496,13 @@ static void send_adm_cal(int port_id, int path)
 		else
 			mem_addr_audvol[acdb_path] = aud_cal;
 	}
-	if ((this_adm.prev_index == index) && (flag == 1)) {
-		if (!send_adm_cal_block(port_id, &aud_cal))
-			pr_debug("%s: Audvol cal sent for port id: %d, path %d\n",
-				__func__, port_id, acdb_path);
-		else
-			pr_debug("%s: Audvol cal not sent for port id: %d, path %d\n",
-				__func__, port_id, acdb_path);
-	}
 
+	if (!send_adm_cal_block(port_id, &aud_cal))
+		pr_debug("%s: Audvol cal sent for port id: %d, path %d\n",
+			__func__, port_id, acdb_path);
+	else
+		pr_debug("%s: Audvol cal not sent for port id: %d, path %d\n",
+			__func__, port_id, acdb_path);
 }
 
 int adm_connect_afe_port(int mode, int session_id, int port_id)
@@ -727,8 +719,8 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology)
 				rate = 16000;
 		}
 
-        if ((open.topology_id  == 0) || (port_id == VOICE_RECORD_RX) || (port_id == VOICE_RECORD_TX))
-          open.topology_id = topology;
+		if (open.topology_id  == 0)
+			open.topology_id = topology;
 
 		open.channel_config = channel_mode & 0x00FF;
 		open.rate  = rate;
@@ -886,8 +878,8 @@ int adm_multi_ch_copp_open(int port_id, int path, int rate, int channel_mode,
 				rate = 16000;
 		}
 
-        if ((open.topology_id  == 0) || (port_id == VOICE_RECORD_RX) || (port_id == VOICE_RECORD_TX))
-          open.topology_id = topology;
+		if (open.topology_id  == 0)
+			open.topology_id = topology;
 
 		open.channel_config = channel_mode & 0x00FF;
 		open.rate  = rate;
@@ -1236,7 +1228,7 @@ int adm_close(int port_id)
 
 		atomic_set(&this_adm.copp_id[index], RESET_COPP_ID);
 		atomic_set(&this_adm.copp_stat[index], 0);
-		this_adm.prev_index = 0xffff;
+
 
 		pr_debug("%s:coppid %d portid=%d index=%d coppcnt=%d\n",
 				__func__,
@@ -1273,7 +1265,7 @@ static int __init adm_init(void)
 	int i = 0;
 	init_waitqueue_head(&this_adm.wait);
 	this_adm.apr = NULL;
-	this_adm.prev_index = 0xffff;
+
 	for (i = 0; i < AFE_MAX_PORTS; i++) {
 		atomic_set(&this_adm.copp_id[i], RESET_COPP_ID);
 		atomic_set(&this_adm.copp_cnt[i], 0);

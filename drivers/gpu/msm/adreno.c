@@ -76,10 +76,6 @@
 /*default log levels is error for everything*/
 #define KGSL_LOG_LEVEL_DEFAULT 3
 
-#ifndef CONFIG_DEBUG_FS
-unsigned int kgsl_cff_dump_enable;
-#endif
-
 static const struct kgsl_functable adreno_functable;
 
 static struct adreno_device device_3d0 = {
@@ -572,15 +568,13 @@ static void adreno_cleanup_pt(struct kgsl_device *device,
 
 	kgsl_mmu_unmap(pagetable, &device->memstore);
 
-	kgsl_mmu_unmap(pagetable, &adreno_dev->pwron_fixup);
-
 	kgsl_mmu_unmap(pagetable, &device->mmu.setstate_memory);
 }
 
 static int adreno_setup_pt(struct kgsl_device *device,
 			struct kgsl_pagetable *pagetable)
 {
-	int result;
+	int result = 0;
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	struct adreno_ringbuffer *rb = &adreno_dev->ringbuffer;
 
@@ -596,13 +590,9 @@ static int adreno_setup_pt(struct kgsl_device *device,
 	if (result)
 		goto unmap_memptrs_desc;
 
-	result = kgsl_mmu_map_global(pagetable, &adreno_dev->pwron_fixup);
-	if (result)
-		goto unmap_memstore_desc;
-
 	result = kgsl_mmu_map_global(pagetable, &device->mmu.setstate_memory);
 	if (result)
-		goto unmap_pwron_fixup_desc;
+		goto unmap_memstore_desc;
 
 	/*
 	 * Set the mpu end to the last "normal" global memory we use.
@@ -611,10 +601,19 @@ static int adreno_setup_pt(struct kgsl_device *device,
 	 */
 	device->mh.mpu_range = device->mmu.setstate_memory.gpuaddr +
 				device->mmu.setstate_memory.size;
+
+	if (adreno_is_a305(adreno_dev)) {
+		result = kgsl_mmu_map_global(pagetable,
+				&adreno_dev->on_resume_cmd);
+		if (result)
+			goto unmap_setstate_desc;
+		device->mh.mpu_range = device->mmu.setstate_memory.gpuaddr +
+				device->mmu.setstate_memory.size;
+	}
 	return result;
 
-unmap_pwron_fixup_desc:
-	kgsl_mmu_unmap(pagetable, &adreno_dev->pwron_fixup);
+unmap_setstate_desc:
+	kgsl_mmu_unmap(pagetable, &device->mmu.setstate_memory);
 
 unmap_memstore_desc:
 	kgsl_mmu_unmap(pagetable, &device->memstore);
@@ -644,6 +643,7 @@ error:
 static bool adreno_use_default_setstate(struct adreno_device *adreno_dev)
 {
 	return (adreno_isidle(&adreno_dev->dev) ||
+			adreno_dev->drawctxt_active == NULL ||
 			KGSL_STATE_ACTIVE != adreno_dev->dev.state ||
 			adreno_dev->dev.active_cnt == 0 ||
 			kgsl_cff_dump_enable);
@@ -1541,6 +1541,7 @@ adreno_probe(struct platform_device *pdev)
 		goto error_close_rb;
 
 	adreno_debugfs_init(device);
+	adreno_dev->on_resume_issueib = false;
 
 	adreno_ft_init_sysfs(device);
 
@@ -1568,6 +1569,8 @@ static int __devexit adreno_remove(struct platform_device *pdev)
 
 	kgsl_pwrscale_detach_policy(device);
 	kgsl_pwrscale_close(device);
+	if (adreno_is_a305(adreno_dev))
+		kgsl_sharedmem_free(&adreno_dev->on_resume_cmd);
 
 	adreno_ringbuffer_close(&adreno_dev->ringbuffer);
 	kgsl_device_platform_remove(device);
@@ -1648,11 +1651,6 @@ static int adreno_start(struct kgsl_device *device)
 	kgsl_pwrctrl_enable(device);
 
 	/* Set up a2xx special case */
-
-	/* Set the bit to indicate that we've just powered on */
-	set_bit(ADRENO_DEVICE_PWRON, &adreno_dev->priv);
-
-	/* Set up the MMU */
 	if (adreno_is_a2xx(adreno_dev)) {
 		/*
 		 * the MH_CLNT_INTF_CTRL_CONFIG registers aren't present
@@ -1679,6 +1677,18 @@ static int adreno_start(struct kgsl_device *device)
 		ft_detect_regs[10] = A3XX_RBBM_PERFCTR_SP_5_LO;
 		ft_detect_regs[11] = A3XX_RBBM_PERFCTR_SP_5_HI;
 	}
+
+	/*
+	 * Allocate some memory for A305 to do an extra draw on resume
+	 * from SLUMBER state.
+	 */
+	if (adreno_is_a305(adreno_dev) &&
+			adreno_dev->on_resume_cmd.hostptr == NULL) {
+		status = kgsl_allocate_contiguous(&adreno_dev->on_resume_cmd,
+					PAGE_SIZE);
+		if (status)
+			goto error_clk_off;
+        }
 
 	status = kgsl_mmu_start(device);
 	if (status)
@@ -1961,8 +1971,7 @@ static int _find_cmd_seq_after_eop_ts(struct adreno_ringbuffer *rb,
 	}
 	if (status)
 		KGSL_FT_ERR(rb->device,
-		"Failed to find the command sequence after eop timestamp %x\n",
-		global_eop);
+		"Failed to find the command sequence after eop timestamp\n");
 	return status;
 }
 
@@ -2082,7 +2091,6 @@ static void adreno_setup_ft_data(struct kgsl_device *device,
 	if (!adreno_dev->ft_policy)
 		adreno_dev->ft_policy = KGSL_FT_DEFAULT_POLICY;
 
-	/* Look for the command stream that is right after the global eop */
 	ret = _find_cmd_seq_after_eop_ts(rb, &rb_rptr,
 					ft_data->global_eop + 1, false);
 	if (ret) {
@@ -2091,7 +2099,7 @@ static void adreno_setup_ft_data(struct kgsl_device *device,
 	} else {
 		ft_data->start_of_replay_cmds = rb_rptr;
 		ft_data->ft_policy &= ~KGSL_FT_TEMP_DISABLE;
-	}
+}
 
 	if (context) {
 		adreno_context = context->devctxt;
@@ -2146,6 +2154,7 @@ static int
 _adreno_ft_restart_device(struct kgsl_device *device,
 		   struct kgsl_context *context)
 {
+
 	struct adreno_context *adreno_context = NULL;
 
 	/* restart device */
@@ -2268,23 +2277,14 @@ _adreno_ft(struct kgsl_device *device,
 	struct adreno_context *adreno_context = NULL;
 	struct adreno_context *last_active_ctx = adreno_dev->drawctxt_active;
 	unsigned int long_ib = 0;
-	static int no_context_ft;
 
 	context = kgsl_context_get(device, ft_data->context_id);
 
 	if (context == NULL) {
 		KGSL_FT_ERR(device, "Last context unknown id:%d\n",
 			ft_data->context_id);
-		if (no_context_ft) {
-			/*
-			 * If 2 consecutive no context ft occurred then
-			 * just reset GPU
-			 */
-			no_context_ft = 0;
-			goto play_good_cmds;
-		}
+		goto play_good_cmds;
 	} else {
-		no_context_ft = 0;
 		adreno_context = context->devctxt;
 		adreno_context->flags |= CTXT_FLAGS_GPU_HANG;
 		/*
@@ -2343,7 +2343,7 @@ _adreno_ft(struct kgsl_device *device,
 	}
 
 	/* Do not try the reply if hang is due to a pagefault */
-	if (adreno_context && adreno_context->pagefault) {
+	if (adreno_context->pagefault) {
 		if ((ft_data->context_id == adreno_context->id) &&
 			(ft_data->global_eop == adreno_context->pagefault_ts)) {
 			ft_data->ft_policy &= ~KGSL_FT_REPLAY;
@@ -2408,7 +2408,7 @@ _adreno_ft(struct kgsl_device *device,
 
 		/* EOF not found in RB, discard till EOF in
 		   next IB submission */
-		if (adreno_context && (i == ft_data->bad_rb_size)) {
+		if (i == ft_data->bad_rb_size) {
 			adreno_context->flags |= CTXT_FLAGS_SKIP_EOF;
 			KGSL_FT_INFO(device,
 			"EOF not found in RB, skip next issueib till EOF\n");
@@ -2445,14 +2445,8 @@ play_good_cmds:
 			ft_data->good_rb_buffer, ft_data->good_rb_size);
 
 	if (ret) {
-		/*
-		 * If we fail here we can try to invalidate another
-		 * context and try fault tolerance again, although
-		 * we will only try ft with no context once to avoid
-		 * going into continuous loop of trying ft with no context
-		 */
-		if (!context)
-			no_context_ft = 1;
+		/* If we fail here we can try to invalidate another
+		 * context and try fault tolerance again */
 		ret = -EAGAIN;
 		KGSL_FT_ERR(device, "Playing good commands unsuccessful\n");
 		goto done;
@@ -3093,7 +3087,7 @@ err:
 	KGSL_DRV_ERR(device, "spun too long waiting for RB to idle\n");
 	if (KGSL_STATE_DUMP_AND_FT != device->state &&
 		!adreno_dump_and_exec_ft(device)) {
-		wait_time = jiffies + msecs_to_jiffies(ADRENO_IDLE_TIMEOUT);
+		wait_time = jiffies + ADRENO_IDLE_TIMEOUT;
 		goto retry;
 	}
 	return -ETIMEDOUT;
@@ -3168,6 +3162,8 @@ static int adreno_suspend_context(struct kgsl_device *device)
 		adreno_drawctxt_switch(adreno_dev, NULL, 0);
 		status = adreno_idle(device);
 	}
+	if (adreno_is_a305(adreno_dev))
+		adreno_dev->on_resume_issueib = true;
 
 	return status;
 }
@@ -3225,9 +3221,6 @@ struct kgsl_memdesc *adreno_find_region(struct kgsl_device *device,
 
 	if (kgsl_gpuaddr_in_memdesc(&device->memstore, gpuaddr, size))
 		return &device->memstore;
-
-	if (kgsl_gpuaddr_in_memdesc(&adreno_dev->pwron_fixup, gpuaddr, size))
-		return &adreno_dev->pwron_fixup;
 
 	if (kgsl_gpuaddr_in_memdesc(&device->mmu.setstate_memory, gpuaddr,
 					size))
@@ -3504,32 +3497,6 @@ unsigned int adreno_ft_detect(struct kgsl_device *device,
 
 		mb();
 
-		for (i = 0; i < FT_DETECT_REGS_COUNT; i++) {
-			if (curr_reg_val[i] != prev_reg_val[i]) {
-				fast_hang_detected = 0;
-
-				/* Check for long IB here */
-				if ((i >=
-					LONG_IB_DETECT_REG_INDEX_START)
-					&&
-					(i <=
-					LONG_IB_DETECT_REG_INDEX_END))
-					long_ib_detected = 0;
-			}
-		}
-
-		if (fast_hang_detected) {
-			KGSL_FT_ERR(device,
-				"Proc %s, ctxt_id %d ts %d triggered fault tolerance"
-				" on global ts %d\n",
-				curr_context ? curr_context->pid_name : "",
-				curr_context ? curr_context->id : 0,
-				(kgsl_readtimestamp(device, context,
-				KGSL_TIMESTAMP_RETIRED) + 1),
-				curr_global_ts + 1);
-			return 1;
-		}
-
 		if (curr_context != NULL) {
 
 			curr_context->ib_gpu_time_used += KGSL_TIMEOUT_PART;
@@ -3537,6 +3504,31 @@ unsigned int adreno_ft_detect(struct kgsl_device *device,
 			"Proc %s used GPU Time %d ms on timestamp 0x%X\n",
 			curr_context->pid_name, curr_context->ib_gpu_time_used,
 			curr_global_ts+1);
+
+			for (i = 0; i < FT_DETECT_REGS_COUNT; i++) {
+				if (curr_reg_val[i] != prev_reg_val[i]) {
+					fast_hang_detected = 0;
+
+					/* Check for long IB here */
+					if ((i >=
+						LONG_IB_DETECT_REG_INDEX_START)
+						&&
+						(i <=
+						LONG_IB_DETECT_REG_INDEX_END))
+						long_ib_detected = 0;
+				}
+			}
+
+			if (fast_hang_detected) {
+				KGSL_FT_ERR(device,
+					"Proc %s, ctxt_id %d ts %d triggered fault tolerance"
+					" on global ts %d\n",
+					curr_context->pid_name, curr_context->id
+					, (kgsl_readtimestamp(device, context,
+					KGSL_TIMESTAMP_RETIRED)+1),
+					curr_global_ts+1);
+				return 1;
+			}
 
 			if ((long_ib_detected) &&
 				(!(curr_context->flags &
@@ -3566,6 +3558,10 @@ unsigned int adreno_ft_detect(struct kgsl_device *device,
 					}
 				}
 			}
+		} else {
+			KGSL_FT_ERR(device,
+				"Last context unknown id:%d\n",
+				curr_context_id);
 		}
 	} else {
 		/* GPU is moving forward */

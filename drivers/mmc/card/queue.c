@@ -77,6 +77,17 @@ static int mmc_queue_thread(void *d)
 		spin_unlock_irq(q->queue_lock);
 
 		if (req || mq->mqrq_prev->req) {
+			/*
+			 * If this is the first request, BKOPs might be in
+			 * progress and needs to be stopped before issuing the
+			 * request
+			 */
+			if (card->ext_csd.bkops_en &&
+			    card->bkops_info.started_delayed_bkops) {
+				card->bkops_info.started_delayed_bkops = false;
+				mmc_stop_bkops(card);
+			}
+
 			set_current_state(TASK_RUNNING);
 			mq->issue_fn(mq, req);
 			if (mq->flags & MMC_QUEUE_NEW_REQUEST) {
@@ -398,11 +409,10 @@ EXPORT_SYMBOL(mmc_cleanup_queue);
  * complete any outstanding requests.  This ensures that we
  * won't suspend while a request is being processed.
  */
-int mmc_queue_suspend(struct mmc_queue *mq)
+void mmc_queue_suspend(struct mmc_queue *mq)
 {
 	struct request_queue *q = mq->queue;
 	unsigned long flags;
-	int rc = 0;
 
 	if (!(mq->flags & MMC_QUEUE_SUSPENDED)) {
 		mq->flags |= MMC_QUEUE_SUSPENDED;
@@ -411,20 +421,8 @@ int mmc_queue_suspend(struct mmc_queue *mq)
 		blk_stop_queue(q);
 		spin_unlock_irqrestore(q->queue_lock, flags);
 
-		rc = down_trylock(&mq->thread_sem);
-		if (rc) {
-			/*
-			 * Failed to take the lock so better to abort the
-			 * suspend because mmcqd thread is processing requests.
-			 */
-			mq->flags &= ~MMC_QUEUE_SUSPENDED;
-			spin_lock_irqsave(q->queue_lock, flags);
-			blk_start_queue(q);
-			spin_unlock_irqrestore(q->queue_lock, flags);
-			rc = -EBUSY;
-		}
+		down(&mq->thread_sem);
 	}
-	return rc;
 }
 
 /**

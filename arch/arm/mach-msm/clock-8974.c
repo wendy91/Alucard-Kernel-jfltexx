@@ -795,6 +795,7 @@ static DEFINE_CLK_VOTER(pnoc_sdcc3_clk, &pnoc_clk.c, 0);
 static DEFINE_CLK_VOTER(pnoc_sdcc4_clk, &pnoc_clk.c, 0);
 
 static DEFINE_CLK_VOTER(pnoc_sps_clk, &pnoc_clk.c, 0);
+static DEFINE_CLK_VOTER(pnoc_qseecom_clk, &pnoc_clk.c, 0);
 
 static struct clk_freq_tbl ftbl_gcc_usb30_master_clk[] = {
 	F(125000000,  gpll0,   1,   5,  24),
@@ -5045,11 +5046,6 @@ static struct clk_lookup msm_clocks_8974[] = {
 	CLK_LOOKUP("bus_clk",      gcc_ce2_axi_clk.c, "qcrypto.0"),
 	CLK_LOOKUP("core_clk_src", ce2_clk_src.c,     "qcrypto.0"),
 
-	CLK_LOOKUP("core_clk",     gcc_ce1_clk.c,         "qseecom"),
-	CLK_LOOKUP("iface_clk",    gcc_ce1_ahb_clk.c,     "qseecom"),
-	CLK_LOOKUP("bus_clk",      gcc_ce1_axi_clk.c,     "qseecom"),
-	CLK_LOOKUP("core_clk_src", ce1_clk_src.c,         "qseecom"),
-
 	CLK_LOOKUP("core_clk", gcc_gp1_clk.c, ""),
 	CLK_LOOKUP("core_clk", gcc_gp2_clk.c, ""),
 	CLK_LOOKUP("core_clk", gcc_gp3_clk.c, ""),
@@ -5071,8 +5067,8 @@ static struct clk_lookup msm_clocks_8974[] = {
 	CLK_LOOKUP("core_clk", gcc_sdcc4_apps_clk.c, "msm_sdcc.4"),
 	CLK_LOOKUP("bus_clk", pnoc_sdcc4_clk.c, "msm_sdcc.4"),
 
-	CLK_LOOKUP("iface_clk", gcc_tsif_ahb_clk.c, "f99d8000.msm_tspp"),
-	CLK_LOOKUP("ref_clk", gcc_tsif_ref_clk.c, "f99d8000.msm_tspp"),
+	CLK_LOOKUP("iface_clk", gcc_tsif_ahb_clk.c, ""),
+	CLK_LOOKUP("ref_clk", gcc_tsif_ref_clk.c, ""),
 
 	CLK_LOOKUP("core_clk", gcc_usb30_master_clk.c,    "msm_dwc3"),
 	CLK_LOOKUP("utmi_clk", gcc_usb30_mock_utmi_clk.c, "msm_dwc3"),
@@ -5236,6 +5232,7 @@ static struct clk_lookup msm_clocks_8974[] = {
 	CLK_LOOKUP("core_clk", gcc_prng_ahb_clk.c, "msm_rng"),
 
 	CLK_LOOKUP("dfab_clk", pnoc_sps_clk.c, "msm_sps"),
+	CLK_LOOKUP("bus_clk",  pnoc_qseecom_clk.c, "qseecom"),
 
 	CLK_LOOKUP("bus_clk", snoc_clk.c, ""),
 	CLK_LOOKUP("bus_clk", pnoc_clk.c, ""),

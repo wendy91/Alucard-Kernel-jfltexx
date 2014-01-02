@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1999-2013, Broadcom Corporation
- *
+ * Copyright (C) 1999-2012, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
@@ -21,7 +21,7 @@
  *
  * Fundamental constants relating to IP Protocol
  *
- * $Id: bcmip.h 384540 2013-02-12 04:28:58Z $
+ * $Id: bcmip.h 346935 2012-07-25 00:24:55Z $
  */
 
 #ifndef _bcmip_h_
@@ -64,8 +64,8 @@
 #define IPV4_MIN_HEADER_LEN     20
 
 
-#define IPV4_VER_MASK		0xf0
-#define IPV4_VER_SHIFT		4
+#define IPV4_VER_MASK		0xf0	
+#define IPV4_VER_SHIFT		4	
 
 #define IPV4_HLEN_MASK		0x0f	
 #define IPV4_HLEN(ipv4_body)	(4 * (((uint8 *)(ipv4_body))[IPV4_VER_HL_OFFSET] & IPV4_HLEN_MASK))
@@ -210,4 +210,4 @@ ipv6_exthdr_len(uint8 *h, uint8 *proto)
 
 #include <packed_section_end.h>
 
-#endif
+#endif	
