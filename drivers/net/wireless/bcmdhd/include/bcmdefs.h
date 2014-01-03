@@ -1,8 +1,8 @@
 /*
  * Misc system wide definitions
  *
- * Copyright (C) 1999-2013, Broadcom Corporation
- *
+ * Copyright (C) 1999-2012, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmdefs.h 424298 2013-09-17 06:38:13Z $
+ * $Id: bcmdefs.h 416262 2013-08-02 12:30:57Z $
  */
 
 #ifndef	_bcmdefs_h_
@@ -64,7 +64,7 @@
 #define BCMFASTPATH
 #define BCMFASTPATH_HOST
 #endif
-#endif
+#endif 
 
 
 
@@ -186,13 +186,9 @@ typedef struct {
 #if defined(BCM_RPC_NOCOPY) || defined(BCM_RCP_TXNOCOPY)
 
 #define BCMEXTRAHDROOM 260
-#else
-#if defined(BCM47XX_CA9)
-#define BCMEXTRAHDROOM 224
-#else
+#else 
 #define BCMEXTRAHDROOM 204
-#endif
-#endif
+#endif 
 
 
 #ifndef SDALIGN

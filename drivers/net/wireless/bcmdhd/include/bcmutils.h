@@ -1,8 +1,8 @@
 /*
  * Misc useful os-independent macros and functions.
  *
- * Copyright (C) 1999-2013, Broadcom Corporation
- *
+ * Copyright (C) 1999-2012, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmutils.h 427979 2013-10-07 08:35:57Z $
+ * $Id: bcmutils.h 412798 2013-07-16 15:59:30Z $
  */
 
 #ifndef	_bcmutils_h_
@@ -119,12 +119,12 @@ typedef struct {
 	uint32 ps_retry;     
 	uint32 retry_drop;   
 	uint32 max_avail;    
-	uint32 max_used;
-	uint32 queue_capacity;
+	uint32 max_used;     
+	uint32 queue_capacity; 
 	uint32 rtsfail;
 	uint32 acked;
 } pktq_counters_t;
-#endif
+#endif 
 
 
 #define PKTQ_COMMON	\
@@ -344,10 +344,10 @@ extern uint8 *pktdataoffset(osl_t *osh, void *p,  uint offset);
 extern void *pktoffset(osl_t *osh, void *p,  uint offset);
 
 
-#define	PKTPRIO_VDSCP	0x100
-#define	PKTPRIO_VLAN	0x200
+#define	PKTPRIO_VDSCP	0x100		
+#define	PKTPRIO_VLAN	0x200		
 #define	PKTPRIO_UPD	0x400		
-#define	PKTPRIO_DSCP	0x800
+#define	PKTPRIO_DSCP	0x800		
 
 
 
@@ -386,7 +386,7 @@ extern int bcm_ether_atoe(const char *p, struct ether_addr *ea);
 
 struct ipv4_addr;
 extern char *bcm_ip_ntoa(struct ipv4_addr *ia, char *buf);
-extern int bcm_atoipv4(const char *p, struct ipv4_addr *ip);
+
 
 extern void bcm_mdelay(uint ms);
 
@@ -527,13 +527,9 @@ extern int bcm_format_ssid(char* buf, const uchar ssid[], uint ssid_len);
 #define BCME_TXFAIL			-38 	
 #define BCME_RXFAIL			-39	
 #define BCME_NODEVICE			-40 	
-#define BCME_NMODE_DISABLED		-41
-#define BCME_NONRESIDENT		-42
-#define BCME_SCANREJECT			-43
-#define BCME_USAGE_ERROR                -44
-#define BCME_IOCTL_ERROR                -45
-#define BCME_SERIAL_PORT_ERR            -46
-#define BCME_LAST			BCME_SERIAL_PORT_ERR
+#define BCME_NMODE_DISABLED		-41 	
+#define BCME_NONRESIDENT		-42 
+#define BCME_LAST			BCME_NONRESIDENT
 
 
 #define BCMERRSTRINGTABLE {		\
@@ -580,10 +576,6 @@ extern int bcm_format_ssid(char* buf, const uchar ssid[], uint ssid_len);
 	"Device Not Present",		\
 	"NMODE Disabled",		\
 	"Nonresident overlay access", \
-	"Scan Rejected",		\
-	"WLCMD usage error",		\
-	"WLCMD ioctl error",		\
-	"RWL serial port error", 	\
 }
 
 #ifndef ABS
@@ -596,7 +588,7 @@ extern int bcm_format_ssid(char* buf, const uchar ssid[], uint ssid_len);
 
 #ifndef MAX
 #define	MAX(a, b)		(((a) > (b)) ? (a) : (b))
-#endif
+#endif 
 
 
 #ifndef LIMIT_TO_RANGE
@@ -640,10 +632,6 @@ extern int bcm_format_ssid(char* buf, const uchar ssid[], uint ssid_len);
 #define ARRAYSIZE(a)		(sizeof(a) / sizeof(a[0]))
 #endif
 
-#ifndef ARRAYLAST
-#define ARRAYLAST(a)		(&a[ARRAYSIZE(a)-1])
-#endif
-
 
 extern void *_bcmutils_dummy_fn;
 #define REFERENCE_FUNCTION(f)	(_bcmutils_dummy_fn = (void *)(f))
@@ -651,20 +639,13 @@ extern void *_bcmutils_dummy_fn;
 
 #ifndef setbit
 #ifndef NBBY
-#define	NBBY	8
-#endif
-#ifdef BCMUTILS_BIT_MACROS_USE_FUNCS
-extern void setbit(void *array, uint bit);
-extern void clrbit(void *array, uint bit);
-extern bool isset(const void *array, uint bit);
-extern bool isclr(const void *array, uint bit);
-#else
+#define	NBBY	8	
+#endif 
 #define	setbit(a, i)	(((uint8 *)a)[(i) / NBBY] |= 1 << ((i) % NBBY))
 #define	clrbit(a, i)	(((uint8 *)a)[(i) / NBBY] &= ~(1 << ((i) % NBBY)))
 #define	isset(a, i)	(((const uint8 *)a)[(i) / NBBY] & (1 << ((i) % NBBY)))
 #define	isclr(a, i)	((((const uint8 *)a)[(i) / NBBY] & (1 << ((i) % NBBY))) == 0)
-#endif
-#endif
+#endif 
 
 #define	isbitset(a, i)	(((a) & (1 << (i))) != 0)
 
@@ -813,7 +794,7 @@ extern const char *bcmerrorstr(int bcmerror);
 
 
 typedef uint32 mbool;
-#define mboolset(mb, bit)		((mb) |= (bit))
+#define mboolset(mb, bit)		((mb) |= (bit))		
 #define mboolclr(mb, bit)		((mb) &= ~(bit))	
 #define mboolisset(mb, bit)		(((mb) & (bit)) != 0)	
 #define	mboolmaskset(mb, mask, val)	((mb) = (((mb) & ~(mask)) | (val)))
@@ -845,13 +826,6 @@ extern uint8 bcm_mw_to_qdbm(uint16 mw);
 extern uint bcm_mkiovar(char *name, char *data, uint datalen, char *buf, uint len);
 
 unsigned int process_nvram_vars(char *varbuf, unsigned int len);
-extern bcm_tlv_t *find_vendor_ie(void *tlvs, int tlvs_len,
-	const char *voui, uint8 *type, int type_len);
-
-
-extern void bcm_uint64_multiple_add(uint32* r_high, uint32* r_low, uint32 a, uint32 b, uint32 c);
-
-extern void bcm_uint64_divide(uint32* r, uint32 a_high, uint32 a_low, uint32 b);
 
 #ifdef __cplusplus
 	}
