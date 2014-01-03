@@ -266,13 +266,12 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	int ret = -EFAULT;
 	int index;
 	struct cpufreq_frequency_table *table;
+	struct cpufreq_work_struct *cpu_work = NULL;
 
 	if (!cpu_active(policy->cpu)) {
 		pr_info("cpufreq: cpu %d is not active.\n", policy->cpu);
 		return -ENODEV;
 	}
-
-	struct cpufreq_work_struct *cpu_work = NULL;
 
 	mutex_lock(&per_cpu(cpufreq_suspend, policy->cpu).suspend_mutex);
 
